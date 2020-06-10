@@ -29,26 +29,28 @@ type Renderer interface {
 	Templates() Templates
 }
 
-func NewRenderer(t *Templates) Renderer {
+func NewRenderer(t Templates) Renderer {
 	sr := &sgmlRenderer{
-		functions: make(funcMap),
-		templates: t, // TODO: should we copy this?
+		templates: t,
 	}
 	// Establish some default function handlers.
-	sr.functions["render"] = sr.renderElements
-	sr.functions["renderElements"] = sr.renderElements
-	sr.functions["renderInline"] = sr.renderInlineElements
-	sr.functions["renderList"] = sr.renderListElements
-	sr.functions["renderLines"] = sr.renderLines
-	sr.functions["escape"] = EscapeString
-	sr.functions["renderToC"] = sr.renderTableOfContentsSections
-	sr.functions["renderFootnote"] = sr.renderFootnote
-	sr.functions["includeNewline"] = sr.includeNewline
-	sr.functions["renderVerse"] = sr.renderVerseBlockElement
-	sr.functions["plainText"] = sr.withPlainText
-	sr.functions["trimRight"] = sr.trimRight
-	sr.functions["trimLeft"] = sr.trimLeft
-	sr.functions["trim"] = sr.trimBoth
+	sr.functions = funcMap{
+		"render":         sr.renderElements,
+		"renderElements": sr.renderElements,
+		"renderInline":   sr.renderInlineElements,
+		"renderList":     sr.renderListElements,
+		"renderLines":    sr.renderLines,
+		"escape":         EscapeString,
+		"renderToC":      sr.renderTableOfContentsSections,
+		"renderFootnote": sr.renderFootnote,
+		"includeNewline": sr.includeNewline,
+		"renderVerse":    sr.renderVerseBlockElement,
+		"plainText":      sr.withPlainText,
+		"trimRight":      sr.trimRight,
+		"trimLeft":       sr.trimLeft,
+		"trim":           sr.trimBoth,
+	}
+
 	return sr
 }
 
@@ -72,7 +74,7 @@ func (sr *sgmlRenderer) SetFunction(name string, fn interface{}) {
 // A copy is made, as we cannot change the original Templates
 // due to it already being used.
 func (sr *sgmlRenderer) Templates() Templates {
-	return *sr.templates
+	return sr.templates
 }
 
 func (sr *sgmlRenderer) newTemplate(name string, tmpl string, err error) (*textTemplate, error) {

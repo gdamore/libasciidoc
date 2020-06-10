@@ -2,8 +2,6 @@ package sgml
 
 import "sync"
 
-type TemplateName string
-
 // Templates represents all the templates we use.
 type Templates struct {
 	AdmonitionBlock         string
@@ -66,7 +64,7 @@ type Templates struct {
 
 type sgmlRenderer struct {
 	functions funcMap
-	templates *Templates
+	templates Templates
 	prepared  sync.Once
 
 	// Processed templates

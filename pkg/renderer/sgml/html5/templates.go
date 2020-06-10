@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-var templates = &sgml.Templates{
+var templates = sgml.Templates{
 	AdmonitionBlock:         admonitionBlockTmpl,
 	AdmonitionParagraph:     admonitionParagraphTmpl,
 	Article:                 articleTmpl,
@@ -80,5 +80,5 @@ func Render(ctx *sgml.Context, doc sgml.Document, output io.Writer) (sgml.Metada
 // Templates returns the default Templates use for HTML5.  It may be useful
 // for derived implementations.
 func Templates() sgml.Templates {
-	return *templates
+	return templates
 }
