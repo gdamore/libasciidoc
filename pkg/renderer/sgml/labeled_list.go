@@ -2,12 +2,14 @@ package sgml
 
 import (
 	"bytes"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderLabeledList(ctx *Context, l types.LabeledList) ([]byte, error) {
-	tmpl, err := sr.getLabeledListTmpl(l)
+func (r *sgmlRenderer) renderLabeledList(ctx *renderer.Context, l types.LabeledList) ([]byte, error) {
+	tmpl, err := r.getLabeledListTmpl(l)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to render labeled list")
 	}
@@ -22,8 +24,8 @@ func (sr *sgmlRenderer) renderLabeledList(ctx *Context, l types.LabeledList) ([]
 			Role  string
 			Items []types.LabeledListItem
 		}{
-			ID:    sr.renderElementID(l.Attributes),
-			Title: sr.renderElementTitle(l.Attributes),
+			ID:    r.renderElementID(l.Attributes),
+			Title: r.renderElementTitle(l.Attributes),
 			Role:  l.Attributes.GetAsStringWithDefault(types.AttrRole, ""),
 			Items: l.Items,
 		},
@@ -35,17 +37,17 @@ func (sr *sgmlRenderer) renderLabeledList(ctx *Context, l types.LabeledList) ([]
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) getLabeledListTmpl(l types.LabeledList) (*textTemplate, error) {
+func (r *sgmlRenderer) getLabeledListTmpl(l types.LabeledList) (textTemplate, error) {
 	if layout, ok := l.Attributes["layout"]; ok {
 		switch layout {
 		case "horizontal":
-			return sr.labeledListHorizontal, nil
+			return r.labeledListHorizontal, nil
 		default:
-			return nil, errors.Errorf("unsupported labeled list layout: %s", layout)
+			return textTemplate{}, errors.Errorf("unsupported labeled list layout: %s", layout)
 		}
 	}
 	if l.Attributes.Has(types.AttrQandA) {
-		return sr.qAndAList, nil
+		return r.qAndAList, nil
 	}
-	return sr.labeledList, nil
+	return r.labeledList, nil
 }

@@ -3,16 +3,17 @@ package sgml
 import (
 	"bytes"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
 // TODO: The bold, italic, and monospace items should be refactored to support semantic tags instead.
 
-func (sr *sgmlRenderer) renderQuotedText(ctx *Context, t types.QuotedText) ([]byte, error) {
+func (r *sgmlRenderer) renderQuotedText(ctx *renderer.Context, t types.QuotedText) ([]byte, error) {
 	elementsBuffer := &bytes.Buffer{}
 	for _, element := range t.Elements {
-		b, err := sr.renderElement(ctx, element)
+		b, err := r.renderElement(ctx, element)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to render text quote")
 		}
@@ -22,18 +23,18 @@ func (sr *sgmlRenderer) renderQuotedText(ctx *Context, t types.QuotedText) ([]by
 		}
 	}
 	result := &bytes.Buffer{}
-	var tmpl *textTemplate
+	var tmpl textTemplate
 	switch t.Kind {
 	case types.Bold:
-		tmpl = sr.boldText
+		tmpl = r.boldText
 	case types.Italic:
-		tmpl = sr.italicText
+		tmpl = r.italicText
 	case types.Monospace:
-		tmpl = sr.monospaceText
+		tmpl = r.monospaceText
 	case types.Subscript:
-		tmpl = sr.subscriptText
+		tmpl = r.subscriptText
 	case types.Superscript:
-		tmpl = sr.superscriptText
+		tmpl = r.superscriptText
 	default:
 		return nil, errors.Errorf("unsupported quoted text kind: '%v'", t.Kind)
 	}

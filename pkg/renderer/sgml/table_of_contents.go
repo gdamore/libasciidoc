@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"strconv"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (sr *sgmlRenderer) renderTableOfContents(ctx *Context, toc types.TableOfContents) ([]byte, error) {
+func (r *sgmlRenderer) renderTableOfContents(ctx *renderer.Context, toc types.TableOfContents) ([]byte, error) {
 	log.Debug("rendering table of contents...")
-	renderedSections, err := sr.renderTableOfContentsSections(ctx, toc.Sections)
+	renderedSections, err := r.renderTableOfContentsSections(ctx, toc.Sections)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error while rendering table of contents")
 	}
@@ -20,7 +21,7 @@ func (sr *sgmlRenderer) renderTableOfContents(ctx *Context, toc types.TableOfCon
 		return []byte{}, nil
 	}
 	result := &bytes.Buffer{}
-	err = sr.tocRoot.Execute(result, renderedSections)
+	err = r.tocRoot.Execute(result, renderedSections)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error while rendering table of contents")
 	}
@@ -28,12 +29,12 @@ func (sr *sgmlRenderer) renderTableOfContents(ctx *Context, toc types.TableOfCon
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderTableOfContentsSections(ctx *Context, sections []types.ToCSection) (sanitized, error) {
+func (r *sgmlRenderer) renderTableOfContentsSections(ctx *renderer.Context, sections []types.ToCSection) (sanitized, error) {
 	if len(sections) == 0 {
 		return "", nil
 	}
 	resultBuf := &bytes.Buffer{}
-	err := sr.tocSection.Execute(resultBuf, ContextualPipeline{
+	err := r.tocSection.Execute(resultBuf, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Level    int
@@ -52,11 +53,11 @@ func (sr *sgmlRenderer) renderTableOfContentsSections(ctx *Context, sections []t
 
 // newTableOfContents initializes a TableOfContents from the sections
 // of the given document
-func (sr *sgmlRenderer) newTableOfContents(ctx *Context, doc types.Document) (types.TableOfContents, error) {
+func (r *sgmlRenderer) newTableOfContents(ctx *renderer.Context, doc types.Document) (types.TableOfContents, error) {
 	sections := make([]types.ToCSection, 0, len(doc.Elements))
 	for _, e := range doc.Elements {
 		if s, ok := e.(types.Section); ok {
-			tocs, err := sr.visitSection(ctx, s, 1)
+			tocs, err := r.visitSection(ctx, s, 1)
 			if err != nil {
 				return types.TableOfContents{}, err
 			}
@@ -68,7 +69,7 @@ func (sr *sgmlRenderer) newTableOfContents(ctx *Context, doc types.Document) (ty
 	}, nil
 }
 
-func (sr *sgmlRenderer) visitSection(ctx *Context, section types.Section, currentLevel int) ([]types.ToCSection, error) {
+func (r *sgmlRenderer) visitSection(ctx *renderer.Context, section types.Section, currentLevel int) ([]types.ToCSection, error) {
 	tocLevels, err := getTableOfContentsLevels(ctx)
 	if err != nil {
 		return []types.ToCSection{}, err
@@ -78,7 +79,7 @@ func (sr *sgmlRenderer) visitSection(ctx *Context, section types.Section, curren
 	if currentLevel <= tocLevels {
 		for _, e := range section.Elements {
 			if s, ok := e.(types.Section); ok {
-				tocs, err := sr.visitSection(ctx, s, currentLevel+1)
+				tocs, err := r.visitSection(ctx, s, currentLevel+1)
 				if err != nil {
 					return []types.ToCSection{}, err
 				}
@@ -90,7 +91,7 @@ func (sr *sgmlRenderer) visitSection(ctx *Context, section types.Section, curren
 		return children, nil // for the root section, immediately return its children)
 	}
 
-	renderedTitle, err := sr.renderPlainText(ctx, section.Title)
+	renderedTitle, err := r.renderPlainText(ctx, section.Title)
 	if err != nil {
 		return []types.ToCSection{}, err
 	}
@@ -106,7 +107,7 @@ func (sr *sgmlRenderer) visitSection(ctx *Context, section types.Section, curren
 
 }
 
-func getTableOfContentsLevels(ctx *Context) (int, error) {
+func getTableOfContentsLevels(ctx *renderer.Context) (int, error) {
 	log.Debugf("doc attributes: %v", ctx.Attributes)
 	if l, found := ctx.Attributes.GetAsString(types.AttrTableOfContentsLevels); found {
 		log.Debugf("ToC levels: '%s'", l)

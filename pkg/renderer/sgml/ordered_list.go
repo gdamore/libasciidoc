@@ -2,13 +2,15 @@ package sgml
 
 import (
 	"bytes"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderOrderedList(ctx *Context, l types.OrderedList) ([]byte, error) {
+func (r *sgmlRenderer) renderOrderedList(ctx *renderer.Context, l types.OrderedList) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.orderedList.Execute(result, ContextualPipeline{
+	err := r.orderedList.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID             string
@@ -19,11 +21,11 @@ func (sr *sgmlRenderer) renderOrderedList(ctx *Context, l types.OrderedList) ([]
 			Start          string
 			Items          []types.OrderedListItem
 		}{
-			ID:             sr.renderElementID(l.Attributes),
+			ID:             r.renderElementID(l.Attributes),
 			Title:          l.Attributes.GetAsStringWithDefault(types.AttrTitle, ""),
 			Role:           l.Attributes.GetAsStringWithDefault(types.AttrRole, ""),
 			NumberingStyle: getNumberingStyle(l),
-			ListStyle:      sr.numberingType(getNumberingStyle(l)),
+			ListStyle:      r.numberingType(getNumberingStyle(l)),
 			Start:          l.Attributes.GetAsStringWithDefault(types.AttrStart, ""),
 			Items:          l.Items,
 		},
@@ -43,7 +45,7 @@ func getNumberingStyle(l types.OrderedList) string {
 
 // TODO: Move this to the HTML output perhaps.
 // this numbering style is only really relevant to HTML
-func (sr *sgmlRenderer) numberingType(style string) string {
+func (r *sgmlRenderer) numberingType(style string) string {
 	switch style {
 	case string(types.LowerAlpha):
 		return ` type="a"`

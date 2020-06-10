@@ -8,6 +8,7 @@ import (
 	texttemplate "text/template"
 
 	"github.com/bytesparadise/libasciidoc/pkg/configuration"
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 
 	"github.com/pkg/errors"
@@ -18,7 +19,7 @@ import (
 type Renderer interface {
 
 	// Render renders a document to the given output stream.
-	Render(ctx *Context, doc Document, output io.Writer) (Metadata, error)
+	Render(ctx *renderer.Context, doc types.Document, output io.Writer) (types.Metadata, error)
 
 	// SetFunction sets the named function.
 	SetFunction(name string, fn interface{})
@@ -29,94 +30,95 @@ type Renderer interface {
 	Templates() Templates
 }
 
+// NewRenderer returns a new renderer
 func NewRenderer(t Templates) Renderer {
-	sr := &sgmlRenderer{
+	r := &sgmlRenderer{
 		templates: t,
 	}
 	// Establish some default function handlers.
-	sr.functions = funcMap{
-		"render":         sr.renderElements,
-		"renderElements": sr.renderElements,
-		"renderInline":   sr.renderInlineElements,
-		"renderList":     sr.renderListElements,
-		"renderLines":    sr.renderLines,
+	r.functions = funcMap{
+		"render":         r.renderElements,
+		"renderElements": r.renderElements,
+		"renderInline":   r.renderInlineElements,
+		"renderList":     r.renderListElements,
+		"renderLines":    r.renderLines,
 		"escape":         EscapeString,
-		"renderToC":      sr.renderTableOfContentsSections,
-		"renderFootnote": sr.renderFootnote,
-		"includeNewline": sr.includeNewline,
-		"renderVerse":    sr.renderVerseBlockElement,
-		"plainText":      sr.withPlainText,
-		"trimRight":      sr.trimRight,
-		"trimLeft":       sr.trimLeft,
-		"trim":           sr.trimBoth,
+		"renderToC":      r.renderTableOfContentsSections,
+		"renderFootnote": r.renderFootnote,
+		"includeNewline": r.includeNewline,
+		"renderVerse":    r.renderVerseBlockElement,
+		"plainText":      r.withPlainText,
+		"trimRight":      r.trimRight,
+		"trimLeft":       r.trimLeft,
+		"trim":           r.trimBoth,
 	}
 
-	return sr
+	return r
 }
 
-func (sr *sgmlRenderer) trimLeft(s string) string {
+func (r *sgmlRenderer) trimLeft(s string) string {
 	return strings.TrimLeft(s, " ")
 }
 
-func (sr *sgmlRenderer) trimRight(s string) string {
+func (r *sgmlRenderer) trimRight(s string) string {
 	return strings.TrimRight(s, " ")
 }
 
-func (sr *sgmlRenderer) trimBoth(s string) string {
+func (r *sgmlRenderer) trimBoth(s string) string {
 	return strings.Trim(s, " ")
 }
 
-func (sr *sgmlRenderer) SetFunction(name string, fn interface{}) {
-	sr.functions[name] = fn
+func (r *sgmlRenderer) SetFunction(name string, fn interface{}) {
+	r.functions[name] = fn
 }
 
 // Templates returns the Templates being used by this renderer.
 // A copy is made, as we cannot change the original Templates
 // due to it already being used.
-func (sr *sgmlRenderer) Templates() Templates {
-	return sr.templates
+func (r *sgmlRenderer) Templates() Templates {
+	return r.templates
 }
 
-func (sr *sgmlRenderer) newTemplate(name string, tmpl string, err error) (*textTemplate, error) {
+func (r *sgmlRenderer) newTemplate(name string, tmpl string, err error) (textTemplate, error) {
 	// NB: if the data is missing below, it will be an empty string.
 	if err != nil {
-		return nil, err
+		return textTemplate{}, err
 	}
 	t := texttemplate.New(name)
-	t.Funcs(sr.functions)
+	t.Funcs(r.functions)
 	t, err = t.Parse(tmpl)
 	if err != nil {
 		log.Errorf("failed to initialize '%s' template: %v", name, err)
-		return nil, err
+		return textTemplate{}, err
 	}
-	return t, nil
+	return *t, nil
 }
 
 // Render renders the given document in HTML and writes the result in the given `writer`
-func (sr *sgmlRenderer) Render(ctx *Context, doc Document, output io.Writer) (Metadata, error) {
+func (r *sgmlRenderer) Render(ctx *renderer.Context, doc types.Document, output io.Writer) (types.Metadata, error) {
 
-	var md Metadata
-	err := sr.prepareTemplates()
+	var md types.Metadata
+	err := r.prepareTemplates()
 	if err != nil {
 		return md, err
 	}
-	renderedTitle, err := sr.renderDocumentTitle(ctx, doc)
+	renderedTitle, err := r.renderDocumentTitle(ctx, doc)
 	if err != nil {
 		return md, errors.Wrapf(err, "unable to render full document")
 	}
 	// needs to be set before rendering the content elements
-	ctx.TableOfContents, err = sr.newTableOfContents(ctx, doc)
+	ctx.TableOfContents, err = r.newTableOfContents(ctx, doc)
 	if err != nil {
 		return md, errors.Wrapf(err, "unable to render full document")
 	}
-	renderedHeader, renderedContent, err := sr.splitAndRender(ctx, doc)
+	renderedHeader, renderedContent, err := r.splitAndRender(ctx, doc)
 	if err != nil {
 		return md, errors.Wrapf(err, "unable to render full document")
 	}
 
 	if ctx.Config.IncludeHeaderFooter {
 		log.Debugf("Rendering full document...")
-		err = sr.article.Execute(output, struct {
+		err = r.article.Execute(output, struct {
 			Generator     string
 			Doctype       string
 			Title         string
@@ -133,7 +135,7 @@ func (sr *sgmlRenderer) Render(ctx *Context, doc Document, output io.Writer) (Me
 			Generator:     "libasciidoc", // TODO: externalize this value and include the lib version ?
 			Doctype:       doc.Attributes.GetAsStringWithDefault(types.AttrDocType, "article"),
 			Title:         string(renderedTitle),
-			Authors:       sr.renderAuthors(doc),
+			Authors:       r.renderAuthors(doc),
 			Header:        string(renderedHeader),
 			Role:          documentRole(doc),
 			Content:       sanitized(renderedContent), //nolint: gosec
@@ -163,32 +165,32 @@ func (sr *sgmlRenderer) Render(ctx *Context, doc Document, output io.Writer) (Me
 // splitAndRender the document with the header elements on one side
 // and all other elements (table of contents, with preamble, content) on the other side,
 // then renders the header and other elements
-func (sr *sgmlRenderer) splitAndRender(ctx *Context, doc Document) ([]byte, []byte, error) {
+func (r *sgmlRenderer) splitAndRender(ctx *renderer.Context, doc types.Document) ([]byte, []byte, error) {
 	switch doc.Attributes.GetAsStringWithDefault(types.AttrDocType, "article") {
 	case "manpage":
-		return sr.splitAndRenderForManpage(ctx, doc)
+		return r.splitAndRenderForManpage(ctx, doc)
 	default:
-		return sr.splitAndRenderForArticle(ctx, doc)
+		return r.splitAndRenderForArticle(ctx, doc)
 	}
 }
 
 // splits the document with the title of the section 0 (if available) on one side
 // and all other elements (table of contents, with preamble, content) on the other side
-func (sr *sgmlRenderer) splitAndRenderForArticle(ctx *Context, doc Document) ([]byte, []byte, error) {
+func (r *sgmlRenderer) splitAndRenderForArticle(ctx *renderer.Context, doc types.Document) ([]byte, []byte, error) {
 	if ctx.Config.IncludeHeaderFooter {
 		if header, found := doc.Header(); found {
-			renderedHeader, err := sr.renderArticleHeader(ctx, header)
+			renderedHeader, err := r.renderArticleHeader(ctx, header)
 			if err != nil {
 				return nil, nil, err
 			}
-			renderedContent, err := sr.renderDocumentElements(ctx, header.Elements, doc.Footnotes)
+			renderedContent, err := r.renderDocumentElements(ctx, header.Elements, doc.Footnotes)
 			if err != nil {
 				return nil, nil, err
 			}
 			return renderedHeader, renderedContent, nil
 		}
 	}
-	renderedContent, err := sr.renderDocumentElements(ctx, doc.Elements, doc.Footnotes)
+	renderedContent, err := r.renderDocumentElements(ctx, doc.Elements, doc.Footnotes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -197,27 +199,27 @@ func (sr *sgmlRenderer) splitAndRenderForArticle(ctx *Context, doc Document) ([]
 
 // splits the document with the header elements on one side
 // and the other elements (table of contents, with preamble, content) on the other side
-func (sr *sgmlRenderer) splitAndRenderForManpage(ctx *Context, doc Document) ([]byte, []byte, error) {
+func (r *sgmlRenderer) splitAndRenderForManpage(ctx *renderer.Context, doc types.Document) ([]byte, []byte, error) {
 	header, _ := doc.Header()
 	nameSection := header.Elements[0].(types.Section)
 
 	if ctx.Config.IncludeHeaderFooter {
-		renderedHeader, err := sr.renderManpageHeader(ctx, header, nameSection)
+		renderedHeader, err := r.renderManpageHeader(ctx, header, nameSection)
 		if err != nil {
 			return nil, nil, err
 		}
-		renderedContent, err := sr.renderDocumentElements(ctx, header.Elements[1:], doc.Footnotes)
+		renderedContent, err := r.renderDocumentElements(ctx, header.Elements[1:], doc.Footnotes)
 		if err != nil {
 			return nil, nil, err
 		}
 		return renderedHeader, renderedContent, nil
 	}
 	// in that case, we still want to display the name section
-	renderedHeader, err := sr.renderManpageHeader(ctx, types.Section{}, nameSection)
+	renderedHeader, err := r.renderManpageHeader(ctx, types.Section{}, nameSection)
 	if err != nil {
 		return nil, nil, err
 	}
-	renderedContent, err := sr.renderDocumentElements(ctx, header.Elements[1:], doc.Footnotes)
+	renderedContent, err := r.renderDocumentElements(ctx, header.Elements[1:], doc.Footnotes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -228,14 +230,14 @@ func (sr *sgmlRenderer) splitAndRenderForManpage(ctx *Context, doc Document) ([]
 	return []byte{}, result.Bytes(), nil
 }
 
-func documentRole(doc Document) string {
+func documentRole(doc types.Document) string {
 	if header, found := doc.Header(); found {
 		return header.Attributes.GetAsStringWithDefault(types.AttrRole, "")
 	}
 	return ""
 }
 
-func (sr *sgmlRenderer) renderAuthors(doc Document) string {
+func (r *sgmlRenderer) renderAuthors(doc types.Document) string {
 	authors, found := doc.Authors()
 	if !found {
 		return ""
@@ -247,9 +249,9 @@ func (sr *sgmlRenderer) renderAuthors(doc Document) string {
 	return strings.Join(authorStrs, "; ")
 }
 
-func (sr *sgmlRenderer) renderDocumentTitle(ctx *Context, doc Document) ([]byte, error) {
+func (r *sgmlRenderer) renderDocumentTitle(ctx *renderer.Context, doc types.Document) ([]byte, error) {
 	if header, found := doc.Header(); found {
-		title, err := sr.renderPlainText(ctx, header.Title)
+		title, err := r.renderPlainText(ctx, header.Title)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to render document title")
 		}
@@ -258,18 +260,18 @@ func (sr *sgmlRenderer) renderDocumentTitle(ctx *Context, doc Document) ([]byte,
 	return nil, nil
 }
 
-func (sr *sgmlRenderer) renderArticleHeader(ctx *Context, header types.Section) ([]byte, error) {
-	renderedHeader, err := sr.renderInlineElements(ctx, header.Title)
+func (r *sgmlRenderer) renderArticleHeader(ctx *renderer.Context, header types.Section) ([]byte, error) {
+	renderedHeader, err := r.renderInlineElements(ctx, header.Title)
 	if err != nil {
 		return nil, err
 	}
-	documentDetails, err := sr.renderDocumentDetails(ctx)
+	documentDetails, err := r.renderDocumentDetails(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	output := &bytes.Buffer{}
-	err = sr.articleHeader.Execute(output, struct {
+	err = r.articleHeader.Execute(output, struct {
 		Header  string
 		Details *htmltemplate.HTML // TODO: convert to sanitized (no need to be a pointer)
 	}{
@@ -282,12 +284,12 @@ func (sr *sgmlRenderer) renderArticleHeader(ctx *Context, header types.Section) 
 	return output.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderManpageHeader(ctx *Context, header types.Section, nameSection types.Section) ([]byte, error) {
-	renderedHeader, err := sr.renderInlineElements(ctx, header.Title)
+func (r *sgmlRenderer) renderManpageHeader(ctx *renderer.Context, header types.Section, nameSection types.Section) ([]byte, error) {
+	renderedHeader, err := r.renderInlineElements(ctx, header.Title)
 	if err != nil {
 		return nil, err
 	}
-	renderedName, err := sr.renderInlineElements(ctx, nameSection.Title)
+	renderedName, err := r.renderInlineElements(ctx, nameSection.Title)
 	if err != nil {
 		return nil, err
 	}
@@ -296,12 +298,12 @@ func (sr *sgmlRenderer) renderManpageHeader(ctx *Context, header types.Section, 
 		description.Attributes = types.Attributes{}
 	}
 	description.Attributes.AddNonEmpty(types.AttrKind, "manpage")
-	renderedContent, err := sr.renderParagraph(ctx, description)
+	renderedContent, err := r.renderParagraph(ctx, description)
 	if err != nil {
 		return nil, err
 	}
 	output := &bytes.Buffer{}
-	err = sr.manpageHeader.Execute(output, struct {
+	err = r.manpageHeader.Execute(output, struct {
 		Header    string
 		Name      string
 		Content   sanitized
@@ -320,7 +322,7 @@ func (sr *sgmlRenderer) renderManpageHeader(ctx *Context, header types.Section, 
 
 // renderDocumentElements renders all document elements, including the footnotes,
 // but not the HEAD and BODY containers
-func (sr *sgmlRenderer) renderDocumentElements(ctx *Context, source []interface{}, footnotes []types.Footnote) ([]byte, error) {
+func (r *sgmlRenderer) renderDocumentElements(ctx *renderer.Context, source []interface{}, footnotes []types.Footnote) ([]byte, error) {
 	elements := []interface{}{}
 	for i, e := range source {
 		switch e := e.(type) {
@@ -348,12 +350,12 @@ func (sr *sgmlRenderer) renderDocumentElements(ctx *Context, source []interface{
 		}
 	}
 	buff := &bytes.Buffer{}
-	renderedElements, err := sr.renderElements(ctx, elements)
+	renderedElements, err := r.renderElements(ctx, elements)
 	if err != nil {
 		return []byte{}, errors.Wrapf(err, "failed to render document elements")
 	}
 	buff.Write(renderedElements)
-	renderedFootnotes, err := sr.renderFootnotes(ctx, footnotes)
+	renderedFootnotes, err := r.renderFootnotes(ctx, footnotes)
 	if err != nil {
 		return []byte{}, errors.Wrapf(err, "failed to render document elements")
 	}

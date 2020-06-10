@@ -2,10 +2,12 @@ package sgml
 
 import (
 	"bytes"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 )
 
-func (sr *sgmlRenderer) renderUserMacro(ctx *Context, um types.UserMacro) ([]byte, error) {
+func (r *sgmlRenderer) renderUserMacro(ctx *renderer.Context, um types.UserMacro) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	macro, err := ctx.Config.MacroTemplate(um.Name)
 	if err != nil {
@@ -16,7 +18,7 @@ func (sr *sgmlRenderer) renderUserMacro(ctx *Context, um types.UserMacro) ([]byt
 					types.StringElement{Content: um.RawText},
 				},
 			}, nil)
-			return sr.renderParagraph(ctx, p)
+			return r.renderParagraph(ctx, p)
 		}
 		// fallback to render raw text
 		_, err = buf.WriteString(um.RawText)

@@ -5,23 +5,24 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderFootnote(ctx *Context, elements []interface{}) (string, error) {
-	result, err := sr.renderInlineElements(ctx, elements)
+func (r *sgmlRenderer) renderFootnote(ctx *renderer.Context, elements []interface{}) (string, error) {
+	result, err := r.renderInlineElements(ctx, elements)
 	if err != nil {
 		return "", errors.Wrapf(err, "unable to render foot note content")
 	}
 	return strings.TrimSpace(string(result)), nil
 }
 
-func (sr *sgmlRenderer) renderFootnoteReference(note types.FootnoteReference) ([]byte, error) {
+func (r *sgmlRenderer) renderFootnoteReference(note types.FootnoteReference) ([]byte, error) {
 	result := &bytes.Buffer{}
 	if note.ID != types.InvalidFootnoteReference && !note.Duplicate {
 		// valid case for a footnote with content, with our without an explicit reference
-		err := sr.footnote.Execute(result, struct {
+		err := r.footnote.Execute(result, struct {
 			ID  int
 			Ref string
 		}{
@@ -33,7 +34,7 @@ func (sr *sgmlRenderer) renderFootnoteReference(note types.FootnoteReference) ([
 		}
 	} else if note.Duplicate {
 		// valid case for a footnote with content, with our without an explicit reference
-		err := sr.footnoteRef.Execute(result, struct {
+		err := r.footnoteRef.Execute(result, struct {
 			ID  int
 			Ref string
 		}{
@@ -45,7 +46,7 @@ func (sr *sgmlRenderer) renderFootnoteReference(note types.FootnoteReference) ([
 		}
 	} else {
 		// invalid footnote
-		err := sr.invalidFootnote.Execute(result, struct {
+		err := r.invalidFootnote.Execute(result, struct {
 			Ref string
 		}{
 			Ref: note.Ref,
@@ -57,11 +58,11 @@ func (sr *sgmlRenderer) renderFootnoteReference(note types.FootnoteReference) ([
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderFootnoteReferencePlainText(note types.FootnoteReference) ([]byte, error) {
+func (r *sgmlRenderer) renderFootnoteReferencePlainText(note types.FootnoteReference) ([]byte, error) {
 	result := &bytes.Buffer{}
 	if note.ID != types.InvalidFootnoteReference {
 		// valid case for a footnote with content, with our without an explicit reference
-		err := sr.footnoteRefPlain.Execute(result, struct {
+		err := r.footnoteRefPlain.Execute(result, struct {
 			ID    int
 			Class string
 		}{
@@ -77,13 +78,13 @@ func (sr *sgmlRenderer) renderFootnoteReferencePlainText(note types.FootnoteRefe
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderFootnotes(ctx *Context, notes []types.Footnote) ([]byte, error) {
+func (r *sgmlRenderer) renderFootnotes(ctx *renderer.Context, notes []types.Footnote) ([]byte, error) {
 	// skip if there's no foot note in the doc
 	if len(notes) == 0 {
 		return []byte{}, nil
 	}
 	result := &bytes.Buffer{}
-	err := sr.footnotes.Execute(result,
+	err := r.footnotes.Execute(result,
 		ContextualPipeline{
 			Context: ctx,
 			Data: struct {

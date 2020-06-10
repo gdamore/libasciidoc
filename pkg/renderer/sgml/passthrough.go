@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"html/template"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderInlinePassthrough(ctx *Context, p types.InlinePassthrough) ([]byte, error) {
-	renderedContent, err := sr.renderPassthroughContent(ctx, p)
+func (r *sgmlRenderer) renderInlinePassthrough(ctx *renderer.Context, p types.InlinePassthrough) ([]byte, error) {
+	renderedContent, err := r.renderPassthroughContent(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to render passthrough")
 	}
@@ -25,7 +26,7 @@ func (sr *sgmlRenderer) renderInlinePassthrough(ctx *Context, p types.InlinePass
 }
 
 // renderPassthroughMacro renders the passthrough content in its raw from
-func (sr *sgmlRenderer) renderPassthroughContent(ctx *Context, p types.InlinePassthrough) ([]byte, error) {
+func (r *sgmlRenderer) renderPassthroughContent(ctx *renderer.Context, p types.InlinePassthrough) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	for _, element := range p.Elements {
 		switch element := element.(type) {
@@ -36,7 +37,7 @@ func (sr *sgmlRenderer) renderPassthroughContent(ctx *Context, p types.InlinePas
 				return nil, err
 			}
 		default:
-			renderedElement, err := sr.renderElement(ctx, element)
+			renderedElement, err := r.renderElement(ctx, element)
 			if err != nil {
 				return nil, err
 			}

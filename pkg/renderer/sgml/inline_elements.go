@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -15,27 +16,27 @@ type linesRenderer struct {
 
 type renderLinesOption func(config *linesRenderer)
 
-func (sr *sgmlRenderer) withVerbatim() renderLinesOption {
+func (r *sgmlRenderer) withVerbatim() renderLinesOption {
 	return func(config *linesRenderer) {
-		config.render = sr.renderPlainText
+		config.render = r.renderPlainText
 	}
 }
 
-func (sr *sgmlRenderer) renderInlineElements(ctx *Context, elements []interface{}, options ...renderLinesOption) ([]byte, error) {
+func (r *sgmlRenderer) renderInlineElements(ctx *renderer.Context, elements []interface{}, options ...renderLinesOption) ([]byte, error) {
 	if len(elements) == 0 {
 		return []byte{}, nil
 	}
 	log.Debugf("rendering line with %d element(s)...", len(elements))
-	r := linesRenderer{
-		render: sr.renderElement,
+	lr := linesRenderer{
+		render: r.renderElement,
 	}
 	for _, apply := range options {
-		apply(&r)
+		apply(&lr)
 	}
 	// first pass or rendering, using the provided `renderElementFunc`:
 	buf := &bytes.Buffer{}
 	for i, element := range elements {
-		renderedElement, err := r.render(ctx, element)
+		renderedElement, err := lr.render(ctx, element)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to render line")
 		}
@@ -57,4 +58,4 @@ func (sr *sgmlRenderer) renderInlineElements(ctx *Context, elements []interface{
 	return buf.Bytes(), nil
 }
 
-type renderFunc func(*Context, interface{}) ([]byte, error)
+type renderFunc func(*renderer.Context, interface{}) ([]byte, error)

@@ -2,12 +2,14 @@ package sgml
 
 import (
 	"bytes"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (sr *sgmlRenderer) renderLink(ctx *Context, l types.InlineLink) ([]byte, error) { //nolint: unparam
+func (r *sgmlRenderer) renderLink(ctx *renderer.Context, l types.InlineLink) ([]byte, error) { //nolint: unparam
 	result := &bytes.Buffer{}
 	location := l.Location.String()
 	var text []byte
@@ -18,7 +20,7 @@ func (sr *sgmlRenderer) renderLink(ctx *Context, l types.InlineLink) ([]byte, er
 	if len(positionals) > 0 {
 		buf := &bytes.Buffer{}
 		for i, arg := range positionals {
-			t, err := sr.renderInlineElements(ctx, arg)
+			t, err := r.renderInlineElements(ctx, arg)
 			if err != nil {
 				return nil, errors.Wrapf(err, "unable to render external link")
 			}
@@ -32,7 +34,7 @@ func (sr *sgmlRenderer) renderLink(ctx *Context, l types.InlineLink) ([]byte, er
 		class = "bare"
 		text = []byte(location)
 	}
-	err = sr.link.Execute(result, struct {
+	err = r.link.Execute(result, struct {
 		URL   string
 		Text  string
 		Class string

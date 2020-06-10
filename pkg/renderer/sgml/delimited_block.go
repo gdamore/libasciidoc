@@ -8,38 +8,39 @@ import (
 	"github.com/alecthomas/chroma/formatters/html"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (sr *sgmlRenderer) renderDelimitedBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderDelimitedBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	log.Debugf("rendering delimited block of kind '%v'", b.Attributes[types.AttrKind])
 	var err error
 	kind := b.Kind
 	switch kind {
 	case types.Fenced:
-		return sr.renderFencedBlock(ctx, b)
+		return r.renderFencedBlock(ctx, b)
 	case types.Listing:
-		return sr.renderListingBlock(ctx, b)
+		return r.renderListingBlock(ctx, b)
 	case types.Source:
-		return sr.renderSourceBlock(ctx, b)
+		return r.renderSourceBlock(ctx, b)
 	case types.Example:
-		return sr.renderExampleBlock(ctx, b)
+		return r.renderExampleBlock(ctx, b)
 	case types.Quote, types.MarkdownQuote:
-		return sr.renderQuoteBlock(ctx, b)
+		return r.renderQuoteBlock(ctx, b)
 	case types.Verse:
-		return sr.renderVerseBlock(ctx, b)
+		return r.renderVerseBlock(ctx, b)
 	case types.Sidebar:
-		return sr.renderSidebarBlock(ctx, b)
+		return r.renderSidebarBlock(ctx, b)
 	case types.Passthrough:
-		return sr.renderPassthrough(ctx, b)
+		return r.renderPassthrough(ctx, b)
 	default:
 		return nil, errors.Wrapf(err, "unable to render delimited block")
 	}
 }
 
-func (sr *sgmlRenderer) renderFencedBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderFencedBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	previousWithinDelimitedBlock := ctx.WithinDelimitedBlock
 	previousIncludeBlankLine := ctx.IncludeBlankLine
 	defer func() {
@@ -49,22 +50,22 @@ func (sr *sgmlRenderer) renderFencedBlock(ctx *Context, b types.DelimitedBlock) 
 	ctx.WithinDelimitedBlock = true
 	ctx.IncludeBlankLine = true
 	result := &bytes.Buffer{}
-	err := sr.fencedBlock.Execute(result, ContextualPipeline{
+	err := r.fencedBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
 			Title    string
 			Elements []interface{}
 		}{
-			ID:       sr.renderElementID(b.Attributes),
-			Title:    sr.renderElementTitle(b.Attributes),
+			ID:       r.renderElementID(b.Attributes),
+			Title:    r.renderElementTitle(b.Attributes),
 			Elements: discardTrailingBlankLines(b.Elements),
 		},
 	})
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderListingBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderListingBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	previousWithinDelimitedBlock := ctx.WithinDelimitedBlock
 	previousIncludeBlankLine := ctx.IncludeBlankLine
 	defer func() {
@@ -74,22 +75,22 @@ func (sr *sgmlRenderer) renderListingBlock(ctx *Context, b types.DelimitedBlock)
 	ctx.WithinDelimitedBlock = true
 	ctx.IncludeBlankLine = true
 	result := &bytes.Buffer{}
-	err := sr.listingBlock.Execute(result, ContextualPipeline{
+	err := r.listingBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
 			Title    string
 			Elements []interface{}
 		}{
-			ID:       sr.renderElementID(b.Attributes),
-			Title:    sr.renderElementTitle(b.Attributes),
+			ID:       r.renderElementID(b.Attributes),
+			Title:    r.renderElementTitle(b.Attributes),
 			Elements: discardTrailingBlankLines(b.Elements),
 		},
 	})
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderSourceBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderSourceBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	previousWithinDelimitedBlock := ctx.WithinDelimitedBlock
 	previousIncludeBlankLine := ctx.IncludeBlankLine
 	defer func() {
@@ -100,7 +101,7 @@ func (sr *sgmlRenderer) renderSourceBlock(ctx *Context, b types.DelimitedBlock) 
 	ctx.IncludeBlankLine = true
 	// first, render the content
 	contentBuf := &bytes.Buffer{}
-	err := sr.sourceBlockContent.Execute(contentBuf, ContextualPipeline{
+	err := r.sourceBlockContent.Execute(contentBuf, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Elements []interface{}
@@ -149,15 +150,15 @@ func (sr *sgmlRenderer) renderSourceBlock(ctx *Context, b types.DelimitedBlock) 
 	}
 
 	result := &bytes.Buffer{}
-	err = sr.sourceBlock.Execute(result, struct {
+	err = r.sourceBlock.Execute(result, struct {
 		ID                string
 		Title             string
 		Language          string
 		SyntaxHighlighter string
 		Content           string
 	}{
-		ID:                sr.renderElementID(b.Attributes),
-		Title:             sr.renderElementTitle(b.Attributes),
+		ID:                r.renderElementID(b.Attributes),
+		Title:             r.renderElementTitle(b.Attributes),
 		SyntaxHighlighter: highlighter,
 		Language:          language,
 		Content:           content,
@@ -165,10 +166,10 @@ func (sr *sgmlRenderer) renderSourceBlock(ctx *Context, b types.DelimitedBlock) 
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderExampleBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderExampleBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
 	if k, ok := b.Attributes[types.AttrAdmonitionKind].(types.AdmonitionKind); ok {
-		err := sr.admonitionBlock.Execute(result, ContextualPipeline{
+		err := r.admonitionBlock.Execute(result, ContextualPipeline{
 			Context: ctx,
 			Data: struct {
 				ID        string
@@ -178,11 +179,11 @@ func (sr *sgmlRenderer) renderExampleBlock(ctx *Context, b types.DelimitedBlock)
 				Title     string
 				Elements  []interface{}
 			}{
-				ID:        sr.renderElementID(b.Attributes),
+				ID:        r.renderElementID(b.Attributes),
 				Class:     renderClass(k),
 				IconClass: renderIconClass(ctx, k),
 				IconTitle: renderIconTitle(k),
-				Title:     sr.renderElementTitle(b.Attributes),
+				Title:     r.renderElementTitle(b.Attributes),
 				Elements:  discardTrailingBlankLines(b.Elements),
 			},
 		})
@@ -191,16 +192,16 @@ func (sr *sgmlRenderer) renderExampleBlock(ctx *Context, b types.DelimitedBlock)
 	// default, example block
 	var title string
 	if b.Attributes.Has(types.AttrTitle) {
-		title = "Example " + strconv.Itoa(ctx.GetAndIncrementExampleBlockCounter()) + ". " + sr.renderElementTitle(b.Attributes)
+		title = "Example " + strconv.Itoa(ctx.GetAndIncrementExampleBlockCounter()) + ". " + r.renderElementTitle(b.Attributes)
 	}
-	err := sr.exampleBlock.Execute(result, ContextualPipeline{
+	err := r.exampleBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
 			Title    string
 			Elements []interface{}
 		}{
-			ID:       sr.renderElementID(b.Attributes),
+			ID:       r.renderElementID(b.Attributes),
 			Title:    title,
 			Elements: discardTrailingBlankLines(b.Elements),
 		},
@@ -208,9 +209,9 @@ func (sr *sgmlRenderer) renderExampleBlock(ctx *Context, b types.DelimitedBlock)
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderQuoteBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderQuoteBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.quoteBlock.Execute(result, ContextualPipeline{
+	err := r.quoteBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID          string
@@ -218,8 +219,8 @@ func (sr *sgmlRenderer) renderQuoteBlock(ctx *Context, b types.DelimitedBlock) (
 			Attribution Attribution
 			Elements    []interface{}
 		}{
-			ID:          sr.renderElementID(b.Attributes),
-			Title:       sr.renderElementTitle(b.Attributes),
+			ID:          r.renderElementID(b.Attributes),
+			Title:       r.renderElementTitle(b.Attributes),
 			Attribution: newDelimitedBlockAttribution(b),
 			Elements:    b.Elements,
 		},
@@ -227,9 +228,9 @@ func (sr *sgmlRenderer) renderQuoteBlock(ctx *Context, b types.DelimitedBlock) (
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderVerseBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderVerseBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.verseBlock.Execute(result, ContextualPipeline{
+	err := r.verseBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID          string
@@ -237,8 +238,8 @@ func (sr *sgmlRenderer) renderVerseBlock(ctx *Context, b types.DelimitedBlock) (
 			Attribution Attribution
 			Elements    []interface{}
 		}{
-			ID:          sr.renderElementID(b.Attributes),
-			Title:       sr.renderElementTitle(b.Attributes),
+			ID:          r.renderElementID(b.Attributes),
+			Title:       r.renderElementTitle(b.Attributes),
 			Attribution: newDelimitedBlockAttribution(b),
 			Elements:    discardTrailingBlankLines(b.Elements),
 		},
@@ -246,7 +247,7 @@ func (sr *sgmlRenderer) renderVerseBlock(ctx *Context, b types.DelimitedBlock) (
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderVerseBlockElement(ctx *Context, element interface{}) ([]byte, error) {
+func (r *sgmlRenderer) renderVerseBlockElement(ctx *renderer.Context, element interface{}) ([]byte, error) {
 	previousIncludeBlankLine := ctx.IncludeBlankLine
 	defer func() {
 		ctx.IncludeBlankLine = previousIncludeBlankLine
@@ -254,18 +255,18 @@ func (sr *sgmlRenderer) renderVerseBlockElement(ctx *Context, element interface{
 	ctx.IncludeBlankLine = true
 	switch e := element.(type) {
 	case types.Paragraph:
-		return sr.renderVerseBlockParagraph(ctx, e)
+		return r.renderVerseBlockParagraph(ctx, e)
 	case types.BlankLine:
-		return sr.renderBlankLine(ctx, e)
+		return r.renderBlankLine(ctx, e)
 	default:
 		return nil, errors.Errorf("unexpected type of element to include in verse block: %T", element)
 	}
 }
 
-func (sr *sgmlRenderer) renderVerseBlockParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderVerseBlockParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debugf("rendering paragraph with %d line(s) within a delimited block or a list", len(p.Lines))
 	result := &bytes.Buffer{}
-	err := sr.verseBlockParagraph.Execute(result, ContextualPipeline{
+	err := r.verseBlockParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Lines [][]interface{}
@@ -276,32 +277,32 @@ func (sr *sgmlRenderer) renderVerseBlockParagraph(ctx *Context, p types.Paragrap
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderSidebarBlock(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderSidebarBlock(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.sidebarBlock.Execute(result, ContextualPipeline{
+	err := r.sidebarBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
 			Title    string
 			Elements []interface{}
 		}{
-			ID:       sr.renderElementID(b.Attributes),
-			Title:    sr.renderElementTitle(b.Attributes),
+			ID:       r.renderElementID(b.Attributes),
+			Title:    r.renderElementTitle(b.Attributes),
 			Elements: discardTrailingBlankLines(b.Elements),
 		},
 	})
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderPassthrough(ctx *Context, b types.DelimitedBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderPassthrough(ctx *renderer.Context, b types.DelimitedBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.passthroughBlock.Execute(result, ContextualPipeline{
+	err := r.passthroughBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
 			Elements []interface{}
 		}{
-			ID:       sr.renderElementID(b.Attributes),
+			ID:       r.renderElementID(b.Attributes),
 			Elements: discardTrailingBlankLines(b.Elements),
 		},
 	})

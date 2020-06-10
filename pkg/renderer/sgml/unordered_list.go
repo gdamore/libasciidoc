@@ -3,11 +3,12 @@ package sgml
 import (
 	"bytes"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderUnorderedList(ctx *Context, l types.UnorderedList) ([]byte, error) {
+func (r *sgmlRenderer) renderUnorderedList(ctx *renderer.Context, l types.UnorderedList) ([]byte, error) {
 	// make sure nested elements are aware of that their rendering occurs within a list
 	checkList := false
 	if len(l.Items) > 0 {
@@ -17,7 +18,7 @@ func (sr *sgmlRenderer) renderUnorderedList(ctx *Context, l types.UnorderedList)
 	}
 	result := &bytes.Buffer{}
 	// here we must preserve the HTML tags
-	err := sr.unorderedList.Execute(result, ContextualPipeline{
+	err := r.unorderedList.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID        string
@@ -26,8 +27,8 @@ func (sr *sgmlRenderer) renderUnorderedList(ctx *Context, l types.UnorderedList)
 			Checklist bool
 			Items     []types.UnorderedListItem
 		}{
-			ID:        sr.renderElementID(l.Attributes),
-			Title:     sr.renderElementTitle(l.Attributes),
+			ID:        r.renderElementID(l.Attributes),
+			Title:     r.renderElementTitle(l.Attributes),
 			Role:      l.Attributes.GetAsStringWithDefault(types.AttrRole, ""),
 			Checklist: checkList,
 			Items:     l.Items,

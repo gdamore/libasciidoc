@@ -2,14 +2,16 @@ package sgml
 
 import (
 	"bytes"
+	"strconv"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
-	"strconv"
 )
 
-func (sr *sgmlRenderer) renderDocumentDetails(ctx *Context) (*sanitized, error) {
+func (r *sgmlRenderer) renderDocumentDetails(ctx *renderer.Context) (*sanitized, error) {
 	if ctx.Attributes.Has(types.AttrAuthors) {
-		authors, err := sr.renderDocumentAuthorsDetails(ctx)
+		authors, err := r.renderDocumentAuthorsDetails(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while rendering the document details")
 		}
@@ -17,7 +19,7 @@ func (sr *sgmlRenderer) renderDocumentDetails(ctx *Context) (*sanitized, error) 
 		revNumber, _ := ctx.Attributes.GetAsString("revnumber")
 		revDate, _ := ctx.Attributes.GetAsString("revdate")
 		revRemark, _ := ctx.Attributes.GetAsString("revremark")
-		err = sr.documentDetails.Execute(documentDetailsBuff, struct {
+		err = r.documentDetails.Execute(documentDetailsBuff, struct {
 			Authors   sanitized
 			RevNumber string
 			RevDate   string
@@ -37,7 +39,7 @@ func (sr *sgmlRenderer) renderDocumentDetails(ctx *Context) (*sanitized, error) 
 	return nil, nil
 }
 
-func (sr *sgmlRenderer) renderDocumentAuthorsDetails(ctx *Context) (*sanitized, error) { // TODO: use  `types.DocumentAuthor` attribute in context
+func (r *sgmlRenderer) renderDocumentAuthorsDetails(ctx *renderer.Context) (*sanitized, error) { // TODO: use  `types.DocumentAuthor` attribute in context
 	authorsDetailsBuff := &bytes.Buffer{}
 	i := 1
 	for {
@@ -57,7 +59,7 @@ func (sr *sgmlRenderer) renderDocumentAuthorsDetails(ctx *Context) (*sanitized, 
 		if author, ok := ctx.Attributes.GetAsString(authorKey); ok {
 			authorDetailsBuff := &bytes.Buffer{}
 			email, _ := ctx.Attributes.GetAsString(emailKey)
-			err := sr.documentAuthorDetails.Execute(authorDetailsBuff, struct {
+			err := r.documentAuthorDetails.Execute(authorDetailsBuff, struct {
 				Index string
 				Name  string
 				Email string

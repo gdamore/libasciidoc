@@ -4,33 +4,34 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (sr *sgmlRenderer) renderParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	// if len(p.Lines) == 0 {
 	// 	return make([]byte, 0), nil
 	// }
 	result := &bytes.Buffer{}
-	id := sr.renderElementID(p.Attributes)
+	id := r.renderElementID(p.Attributes)
 	var err error
 	if _, ok := p.Attributes[types.AttrAdmonitionKind]; ok {
-		return sr.renderAdmonitionParagraph(ctx, p)
+		return r.renderAdmonitionParagraph(ctx, p)
 	} else if kind, ok := p.Attributes[types.AttrKind]; ok && kind == types.Source {
-		return sr.renderSourceParagraph(ctx, p)
+		return r.renderSourceParagraph(ctx, p)
 	} else if kind, ok := p.Attributes[types.AttrKind]; ok && kind == types.Verse {
-		return sr.renderVerseParagraph(ctx, p)
+		return r.renderVerseParagraph(ctx, p)
 	} else if kind, ok := p.Attributes[types.AttrKind]; ok && kind == types.Quote {
-		return sr.renderQuoteParagraph(ctx, p)
+		return r.renderQuoteParagraph(ctx, p)
 	} else if kind, ok := p.Attributes[types.AttrKind]; ok && kind == "manpage" {
-		return sr.renderManpageNameParagraph(ctx, p)
+		return r.renderManpageNameParagraph(ctx, p)
 	} else if ctx.WithinDelimitedBlock || ctx.WithinList > 0 {
-		return sr.renderDelimitedBlockParagraph(ctx, p)
+		return r.renderDelimitedBlockParagraph(ctx, p)
 	} else {
 		log.Debug("rendering a standalone paragraph")
-		err = sr.paragraph.Execute(result, ContextualPipeline{
+		err = r.paragraph.Execute(result, ContextualPipeline{
 			Context: ctx,
 			Data: struct {
 				ID         string
@@ -41,9 +42,9 @@ func (sr *sgmlRenderer) renderParagraph(ctx *Context, p types.Paragraph) ([]byte
 			}{
 				ID:         id,
 				Class:      getParagraphClass(p),
-				Title:      sr.renderElementTitle(p.Attributes),
+				Title:      r.renderElementTitle(p.Attributes),
 				Lines:      p.Lines,
-				HardBreaks: sr.withHardBreaks(p.Attributes.Has(types.AttrHardBreaks) || ctx.Attributes.Has(types.DocumentAttrHardBreaks)),
+				HardBreaks: r.withHardBreaks(p.Attributes.Has(types.AttrHardBreaks) || ctx.Attributes.Has(types.DocumentAttrHardBreaks)),
 			},
 		})
 	}
@@ -54,14 +55,14 @@ func (sr *sgmlRenderer) renderParagraph(ctx *Context, p types.Paragraph) ([]byte
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderAdmonitionParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderAdmonitionParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debug("rendering admonition paragraph...")
 	result := &bytes.Buffer{}
 	k, ok := p.Attributes[types.AttrAdmonitionKind].(types.AdmonitionKind)
 	if !ok {
 		return nil, errors.Errorf("failed to render admonition with unknown kind: %T", p.Attributes[types.AttrAdmonitionKind])
 	}
-	err := sr.admonitionParagraph.Execute(result, ContextualPipeline{
+	err := r.admonitionParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID        string
@@ -71,8 +72,8 @@ func (sr *sgmlRenderer) renderAdmonitionParagraph(ctx *Context, p types.Paragrap
 			IconClass string
 			Lines     [][]interface{}
 		}{
-			ID:        sr.renderElementID(p.Attributes),
-			Title:     sr.renderElementTitle(p.Attributes),
+			ID:        r.renderElementID(p.Attributes),
+			Title:     r.renderElementTitle(p.Attributes),
 			Class:     renderClass(k),
 			IconTitle: renderIconTitle(k),
 			IconClass: renderIconClass(ctx, k),
@@ -82,10 +83,10 @@ func (sr *sgmlRenderer) renderAdmonitionParagraph(ctx *Context, p types.Paragrap
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderSourceParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderSourceParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debug("rendering source paragraph...")
 	result := &bytes.Buffer{}
-	err := sr.sourceParagraph.Execute(result, ContextualPipeline{
+	err := r.sourceParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID       string
@@ -93,8 +94,8 @@ func (sr *sgmlRenderer) renderSourceParagraph(ctx *Context, p types.Paragraph) (
 			Language string
 			Lines    [][]interface{}
 		}{
-			ID:       sr.renderElementID(p.Attributes),
-			Title:    sr.renderElementTitle(p.Attributes),
+			ID:       r.renderElementID(p.Attributes),
+			Title:    r.renderElementTitle(p.Attributes),
 			Language: p.Attributes.GetAsStringWithDefault(types.AttrLanguage, ""),
 			Lines:    p.Lines,
 		},
@@ -102,10 +103,10 @@ func (sr *sgmlRenderer) renderSourceParagraph(ctx *Context, p types.Paragraph) (
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderVerseParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderVerseParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debug("rendering verse paragraph...")
 	result := &bytes.Buffer{}
-	err := sr.verseParagraph.Execute(result, ContextualPipeline{
+	err := r.verseParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID          string
@@ -113,8 +114,8 @@ func (sr *sgmlRenderer) renderVerseParagraph(ctx *Context, p types.Paragraph) ([
 			Attribution Attribution
 			Lines       [][]interface{}
 		}{
-			ID:          sr.renderElementID(p.Attributes),
-			Title:       sr.renderElementTitle(p.Attributes),
+			ID:          r.renderElementID(p.Attributes),
+			Title:       r.renderElementTitle(p.Attributes),
 			Attribution: newParagraphAttribution(p),
 			Lines:       p.Lines,
 		},
@@ -122,10 +123,10 @@ func (sr *sgmlRenderer) renderVerseParagraph(ctx *Context, p types.Paragraph) ([
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderQuoteParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderQuoteParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debug("rendering quote paragraph...")
 	result := &bytes.Buffer{}
-	err := sr.quoteParagraph.Execute(result, ContextualPipeline{
+	err := r.quoteParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID          string
@@ -133,8 +134,8 @@ func (sr *sgmlRenderer) renderQuoteParagraph(ctx *Context, p types.Paragraph) ([
 			Attribution Attribution
 			Lines       [][]interface{}
 		}{
-			ID:          sr.renderElementID(p.Attributes),
-			Title:       sr.renderElementTitle(p.Attributes),
+			ID:          r.renderElementID(p.Attributes),
+			Title:       r.renderElementTitle(p.Attributes),
 			Attribution: newParagraphAttribution(p),
 			Lines:       p.Lines,
 		},
@@ -142,10 +143,10 @@ func (sr *sgmlRenderer) renderQuoteParagraph(ctx *Context, p types.Paragraph) ([
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderManpageNameParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderManpageNameParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debug("rendering name section paragraph in manpage...")
 	result := &bytes.Buffer{}
-	err := sr.manpageNameParagraph.Execute(result, ContextualPipeline{
+	err := r.manpageNameParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Lines [][]interface{}
@@ -156,10 +157,10 @@ func (sr *sgmlRenderer) renderManpageNameParagraph(ctx *Context, p types.Paragra
 	return result.Bytes(), err
 }
 
-func (sr *sgmlRenderer) renderDelimitedBlockParagraph(ctx *Context, p types.Paragraph) ([]byte, error) {
+func (r *sgmlRenderer) renderDelimitedBlockParagraph(ctx *renderer.Context, p types.Paragraph) ([]byte, error) {
 	log.Debugf("rendering paragraph with %d line(s) within a delimited block or a list", len(p.Lines))
 	result := &bytes.Buffer{}
-	err := sr.delimitedBlockParagraph.Execute(result, ContextualPipeline{
+	err := r.delimitedBlockParagraph.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID         string
@@ -167,8 +168,8 @@ func (sr *sgmlRenderer) renderDelimitedBlockParagraph(ctx *Context, p types.Para
 			CheckStyle string
 			Lines      [][]interface{}
 		}{
-			ID:         sr.renderElementID(p.Attributes),
-			Title:      sr.renderElementTitle(p.Attributes),
+			ID:         r.renderElementID(p.Attributes),
+			Title:      r.renderElementTitle(p.Attributes),
 			CheckStyle: renderCheckStyle(p.Attributes[types.AttrCheckStyle]),
 			Lines:      p.Lines,
 		},
@@ -187,7 +188,7 @@ func renderCheckStyle(style interface{}) string {
 	}
 }
 
-func renderIconClass(ctx *Context, kind types.AdmonitionKind) string {
+func renderIconClass(ctx *renderer.Context, kind types.AdmonitionKind) string {
 	if icons, _ := ctx.Attributes.GetAsString("icons"); icons == "font" {
 		return renderClass(kind)
 	}
@@ -238,7 +239,7 @@ func getParagraphClass(p types.Paragraph) string {
 	return result
 }
 
-func (sr *sgmlRenderer) renderElementTitle(attrs types.Attributes) string {
+func (r *sgmlRenderer) renderElementTitle(attrs types.Attributes) string {
 	if title, found := attrs.GetAsString(types.AttrTitle); found {
 		return strings.TrimSpace(title)
 	}
@@ -255,25 +256,25 @@ type RenderLinesConfig struct {
 type RenderLinesOption func(c *RenderLinesConfig)
 
 // WithHardBreaks sets the hard break option
-func (sr *sgmlRenderer) withHardBreaks(hardBreaks bool) RenderLinesOption {
+func (r *sgmlRenderer) withHardBreaks(hardBreaks bool) RenderLinesOption {
 	return func(c *RenderLinesConfig) {
 		c.hardBreaks = hardBreaks
 	}
 }
 
-// PlainText sets the render func to PlainText instead of HTML
-func (sr *sgmlRenderer) withPlainText() RenderLinesOption {
+// PlainText sets the render func to PlainText instead of SGML
+func (r *sgmlRenderer) withPlainText() RenderLinesOption {
 	return func(c *RenderLinesConfig) {
-		c.render = sr.renderPlainText
+		c.render = r.renderPlainText
 	}
 }
 
 // renderLines renders all lines (i.e, all `InlineElements`` - each `InlineElements` being a slice of elements to generate a line)
 // and includes an `\n` character in-between, until the last one.
 // Trailing spaces are removed for each line.
-func (sr *sgmlRenderer) renderLines(ctx *Context, lines [][]interface{}, options ...RenderLinesOption) ([]byte, error) { // renderLineFunc renderFunc, hardbreak bool
+func (r *sgmlRenderer) renderLines(ctx *renderer.Context, lines [][]interface{}, options ...RenderLinesOption) ([]byte, error) { // renderLineFunc renderFunc, hardbreak bool
 	linesRenderer := RenderLinesConfig{
-		render:     sr.renderLine,
+		render:     r.renderLine,
 		hardBreaks: false,
 	}
 	for _, apply := range options {
@@ -309,9 +310,9 @@ func (sr *sgmlRenderer) renderLines(ctx *Context, lines [][]interface{}, options
 	return buf.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderLine(ctx *Context, element interface{}) ([]byte, error) {
+func (r *sgmlRenderer) renderLine(ctx *renderer.Context, element interface{}) ([]byte, error) {
 	if elements, ok := element.([]interface{}); ok {
-		return sr.renderInlineElements(ctx, elements)
+		return r.renderInlineElements(ctx, elements)
 	}
 
 	return nil, errors.Errorf("invalid type of element for a line: %T", element)

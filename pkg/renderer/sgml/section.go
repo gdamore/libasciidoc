@@ -5,17 +5,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (sr *sgmlRenderer) renderPreamble(ctx *Context, p types.Preamble) ([]byte, error) {
+func (r *sgmlRenderer) renderPreamble(ctx *renderer.Context, p types.Preamble) ([]byte, error) {
 	log.Debugf("rendering preamble...")
 	result := &bytes.Buffer{}
 	// the <div id="preamble"> wrapper is only necessary
 	// if the document has a section 0
-	err := sr.preamble.Execute(result, ContextualPipeline{
+	err := r.preamble.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Wrapper  bool
@@ -32,19 +33,19 @@ func (sr *sgmlRenderer) renderPreamble(ctx *Context, p types.Preamble) ([]byte, 
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderSection(ctx *Context, s types.Section) ([]byte, error) {
+func (r *sgmlRenderer) renderSection(ctx *renderer.Context, s types.Section) ([]byte, error) {
 	log.Debugf("rendering section level %d", s.Level)
-	renderedSectionTitle, err := sr.renderSectionTitle(ctx, s)
+	renderedSectionTitle, err := r.renderSectionTitle(ctx, s)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error while rendering section")
 	}
 	result := &bytes.Buffer{}
 	// select the appropriate template for the section
-	var tmpl *textTemplate
+	var tmpl textTemplate
 	if s.Level == 1 {
-		tmpl = sr.sectionOne
+		tmpl = r.sectionOne
 	} else {
-		tmpl = sr.sectionContent
+		tmpl = r.sectionContent
 	}
 	err = tmpl.Execute(result, ContextualPipeline{
 		Context: ctx,
@@ -64,15 +65,15 @@ func (sr *sgmlRenderer) renderSection(ctx *Context, s types.Section) ([]byte, er
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderSectionTitle(ctx *Context, s types.Section) (string, error) {
+func (r *sgmlRenderer) renderSectionTitle(ctx *renderer.Context, s types.Section) (string, error) {
 	result := &bytes.Buffer{}
-	renderedContent, err := sr.renderInlineElements(ctx, s.Title)
+	renderedContent, err := r.renderInlineElements(ctx, s.Title)
 	if err != nil {
 		return "", errors.Wrapf(err, "error while rendering sectionTitle content")
 	}
 	renderedContentStr := strings.TrimSpace(string(renderedContent))
-	id := sr.renderElementID(s.Attributes)
-	err = sr.sectionHeader.Execute(result, struct {
+	id := r.renderElementID(s.Attributes)
+	err = r.sectionHeader.Execute(result, struct {
 		Level   int
 		ID      string
 		Content string

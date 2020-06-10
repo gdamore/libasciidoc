@@ -1,8 +1,11 @@
 package html5
 
 import (
-	"github.com/bytesparadise/libasciidoc/pkg/renderer/sgml"
 	"io"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
+	"github.com/bytesparadise/libasciidoc/pkg/renderer/sgml"
+	"github.com/bytesparadise/libasciidoc/pkg/types"
 )
 
 var templates = sgml.Templates{
@@ -73,7 +76,7 @@ func init() {
 
 // Render renders the document to the output, using a default instance
 // of the renderer, with default templates.
-func Render(ctx *sgml.Context, doc sgml.Document, output io.Writer) (sgml.Metadata, error) {
+func Render(ctx *renderer.Context, doc types.Document, output io.Writer) (types.Metadata, error) {
 	return defaultRenderer.Render(ctx, doc, output)
 }
 

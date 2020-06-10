@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderStringElement(_ *Context, str types.StringElement) ([]byte, error) {
+func (r *sgmlRenderer) renderStringElement(_ *renderer.Context, str types.StringElement) ([]byte, error) {
 	buf := &bytes.Buffer{}
-	err := sr.stringElement.Execute(buf, str.Content)
+	err := r.stringElement.Execute(buf, str.Content)
 	if err != nil {
 		return []byte{}, errors.Wrapf(err, "unable to render string")
 	}

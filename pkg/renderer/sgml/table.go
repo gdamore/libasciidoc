@@ -3,14 +3,16 @@ package sgml
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"strconv"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"strconv"
 )
 
-func (sr *sgmlRenderer) renderTable(ctx *Context, t types.Table) ([]byte, error) {
+func (r *sgmlRenderer) renderTable(ctx *renderer.Context, t types.Table) ([]byte, error) {
 	result := &bytes.Buffer{}
 	// inspect first line to obtain cell width ratio
 	widths := []string{}
@@ -34,7 +36,7 @@ func (sr *sgmlRenderer) renderTable(ctx *Context, t types.Table) ([]byte, error)
 	if titleAttr, ok := t.Attributes[types.AttrTitle].(string); ok {
 		title = fmt.Sprintf("Table %d. %s", ctx.GetAndIncrementTableCounter(), EscapeString(titleAttr))
 	}
-	err := sr.table.Execute(result, ContextualPipeline{
+	err := r.table.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			Title      string

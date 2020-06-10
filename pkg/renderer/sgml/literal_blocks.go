@@ -2,14 +2,16 @@ package sgml
 
 import (
 	"bytes"
+	"math"
+	"strings"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"strings"
 )
 
-func (sr *sgmlRenderer) renderLiteralBlock(ctx *Context, b types.LiteralBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderLiteralBlock(ctx *renderer.Context, b types.LiteralBlock) ([]byte, error) {
 	log.Debugf("rendering delimited block with content: %s", b.Lines)
 	var lines []string
 	if t, found := b.Attributes.GetAsString(types.AttrLiteralBlockType); found && t == types.LiteralBlockWithSpacesOnFirstLine {
@@ -39,15 +41,15 @@ func (sr *sgmlRenderer) renderLiteralBlock(ctx *Context, b types.LiteralBlock) (
 		lines = b.Lines
 	}
 	result := &bytes.Buffer{}
-	err := sr.literalBlock.Execute(result, ContextualPipeline{
+	err := r.literalBlock.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID    string
 			Title string
 			Lines []string
 		}{
-			ID:    sr.renderElementID(b.Attributes),
-			Title: sr.renderElementTitle(b.Attributes),
+			ID:    r.renderElementID(b.Attributes),
+			Title: r.renderElementTitle(b.Attributes),
 			Lines: lines,
 		}})
 	if err != nil {

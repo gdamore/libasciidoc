@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"strconv"
 
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderImageBlock(ctx *Context, img types.ImageBlock) ([]byte, error) {
+func (r *sgmlRenderer) renderImageBlock(ctx *renderer.Context, img types.ImageBlock) ([]byte, error) {
 	result := &bytes.Buffer{}
 	title := ""
 	if t, found := img.Attributes.GetAsString(types.AttrTitle); found {
 		title = "Figure " + strconv.Itoa(ctx.GetAndIncrementImageCounter()) + ". " + EscapeString(t)
 	}
-	err := sr.blockImage.Execute(result, struct {
+	err := r.blockImage.Execute(result, struct {
 		ID     string
 		Title  string
 		Role   string
@@ -41,9 +42,9 @@ func (sr *sgmlRenderer) renderImageBlock(ctx *Context, img types.ImageBlock) ([]
 	return result.Bytes(), nil
 }
 
-func (sr *sgmlRenderer) renderInlineImage(img types.InlineImage) ([]byte, error) {
+func (r *sgmlRenderer) renderInlineImage(img types.InlineImage) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.inlineImage.Execute(result, struct {
+	err := r.inlineImage.Execute(result, struct {
 		Role   string
 		Title  string
 		Href   string
@@ -52,7 +53,7 @@ func (sr *sgmlRenderer) renderInlineImage(img types.InlineImage) ([]byte, error)
 		Height string
 		Path   string
 	}{
-		Title:  sr.renderElementTitle(img.Attributes),
+		Title:  r.renderElementTitle(img.Attributes),
 		Role:   img.Attributes.GetAsStringWithDefault(types.AttrRole, ""),
 		Alt:    img.Attributes.GetAsStringWithDefault(types.AttrImageAlt, ""),
 		Width:  img.Attributes.GetAsStringWithDefault(types.AttrImageWidth, ""),

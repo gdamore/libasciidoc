@@ -2,13 +2,15 @@ package sgml
 
 import (
 	"bytes"
+
+	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 	"github.com/pkg/errors"
 )
 
-func (sr *sgmlRenderer) renderCalloutList(ctx *Context, l types.CalloutList) ([]byte, error) {
+func (r *sgmlRenderer) renderCalloutList(ctx *renderer.Context, l types.CalloutList) ([]byte, error) {
 	result := &bytes.Buffer{}
-	err := sr.calloutList.Execute(result, ContextualPipeline{
+	err := r.calloutList.Execute(result, ContextualPipeline{
 		Context: ctx,
 		Data: struct {
 			ID    string
@@ -16,7 +18,7 @@ func (sr *sgmlRenderer) renderCalloutList(ctx *Context, l types.CalloutList) ([]
 			Role  string
 			Items []types.CalloutListItem
 		}{
-			ID:    sr.renderElementID(l.Attributes),
+			ID:    r.renderElementID(l.Attributes),
 			Title: l.Attributes.GetAsStringWithDefault(types.AttrTitle, ""),
 			Role:  l.Attributes.GetAsStringWithDefault(types.AttrRole, ""),
 			Items: l.Items,
