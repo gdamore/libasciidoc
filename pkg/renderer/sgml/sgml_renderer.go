@@ -4,8 +4,9 @@ import "sync"
 
 // sgmlRenderer a generic renderer for all SGML backends
 type sgmlRenderer struct {
-	functions funcMap
-	templates Templates
+	functions   funcMap
+	templates   Templates
+	prepareOnce sync.Once
 
 	// Processed templates
 	admonitionBlock         textTemplate
@@ -66,12 +67,10 @@ type sgmlRenderer struct {
 	verseParagraph          textTemplate
 }
 
-var prepared sync.Once
-
 func (r *sgmlRenderer) prepareTemplates() error {
 	tmpls := r.templates
 	var err error
-	prepared.Do(func() {
+	r.prepareOnce.Do(func() {
 		r.admonitionBlock, err = r.newTemplate("admonition-block", tmpls.AdmonitionBlock, err)
 		r.admonitionParagraph, err = r.newTemplate("admonition-paragraph", tmpls.AdmonitionParagraph, err)
 		r.article, err = r.newTemplate("article", tmpls.Article, err)
