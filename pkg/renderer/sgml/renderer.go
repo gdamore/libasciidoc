@@ -79,19 +79,19 @@ func (r *sgmlRenderer) Templates() Templates {
 	return r.templates
 }
 
-func (r *sgmlRenderer) newTemplate(name string, tmpl string, err error) (textTemplate, error) {
+func (r *sgmlRenderer) newTemplate(name string, tmpl string, err error) (*textTemplate, error) {
 	// NB: if the data is missing below, it will be an empty string.
 	if err != nil {
-		return textTemplate{}, err
+		return nil, err
 	}
 	t := texttemplate.New(name)
 	t.Funcs(r.functions)
 	t, err = t.Parse(tmpl)
 	if err != nil {
 		log.Errorf("failed to initialize '%s' template: %v", name, err)
-		return textTemplate{}, err
+		return nil, err
 	}
-	return *t, nil
+	return t, nil
 }
 
 // Render renders the given document in HTML and writes the result in the given `writer`

@@ -23,7 +23,7 @@ func (r *sgmlRenderer) renderQuotedText(ctx *renderer.Context, t types.QuotedTex
 		}
 	}
 	result := &bytes.Buffer{}
-	var tmpl textTemplate
+	var tmpl *textTemplate
 	switch t.Kind {
 	case types.Bold:
 		tmpl = r.boldText

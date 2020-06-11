@@ -3,13 +3,12 @@ package sgml
 import (
 	"bytes"
 
-	"github.com/bytesparadise/libasciidoc/pkg/renderer"
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func (r *sgmlRenderer) renderBlankLine(ctx *renderer.Context, _ types.BlankLine) ([]byte, error) {
+func (r *sgmlRenderer) renderBlankLine(ctx *Context, _ types.BlankLine) ([]byte, error) {
 	if ctx.IncludeBlankLine {
 		buf := &bytes.Buffer{}
 		if err := r.blankLine.Execute(buf, nil); err != nil {

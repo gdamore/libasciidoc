@@ -41,7 +41,7 @@ func (r *sgmlRenderer) renderSection(ctx *renderer.Context, s types.Section) ([]
 	}
 	result := &bytes.Buffer{}
 	// select the appropriate template for the section
-	var tmpl textTemplate
+	var tmpl *textTemplate
 	if s.Level == 1 {
 		tmpl = r.sectionOne
 	} else {

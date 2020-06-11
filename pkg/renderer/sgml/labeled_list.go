@@ -37,13 +37,13 @@ func (r *sgmlRenderer) renderLabeledList(ctx *renderer.Context, l types.LabeledL
 	return result.Bytes(), nil
 }
 
-func (r *sgmlRenderer) getLabeledListTmpl(l types.LabeledList) (textTemplate, error) {
+func (r *sgmlRenderer) getLabeledListTmpl(l types.LabeledList) (*textTemplate, error) {
 	if layout, ok := l.Attributes["layout"]; ok {
 		switch layout {
 		case "horizontal":
 			return r.labeledListHorizontal, nil
 		default:
-			return textTemplate{}, errors.Errorf("unsupported labeled list layout: %s", layout)
+			return nil, errors.Errorf("unsupported labeled list layout: %s", layout)
 		}
 	}
 	if l.Attributes.Has(types.AttrQandA) {
