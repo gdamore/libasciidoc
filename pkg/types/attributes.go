@@ -322,6 +322,40 @@ func (a Attributes) Positionals() [][]interface{} {
 	return result
 }
 
+func addAttribute(attrs Attributes, key string, val interface{}) error {
+	switch key {
+	case AttrID:
+		// ID must be a string, first one wins.
+		if v, ok := val.(string); ok {
+			if _, ok = attrs[key]; !ok {
+				attrs[key] = v
+			}
+			return nil
+		}
+		return errors.New("id must be a string")
+	case AttrRole:
+		// Roles are special.  We store them as []string, as there can be multiple roles.
+		old, _ := attrs[AttrRole]
+		roles, _ := old.([]string)
+
+		switch v := val.(type) {
+		case string:
+			roles = append(roles, v)
+		case []string:
+			roles = append(roles, v...)
+		default:
+			return fmt.Errorf("role type wrong (%T)", val)
+		}
+		attrs[AttrRole] = roles
+		return nil
+
+	default:
+		// All other attributes stored as is.  Hopefully just text.
+		attrs[key] = val
+		return nil
+	}
+}
+
 // NewAttributes retrieves the ElementID, ElementTitle and ElementInlineLink from the given slice of attributes
 func NewAttributes(attributes interface{}) (Attributes, error) {
 	if attributes == nil {
@@ -355,6 +389,50 @@ func NewAttributes(attributes interface{}) (Attributes, error) {
 		result := Attributes{}
 		for k, v := range attrs {
 			result[k] = v
+		}
+		return result, nil
+	default:
+		return nil, fmt.Errorf("unexpected type of attribute: '%T'", attrs)
+	}
+}
+
+// NewQuotedTextAttributes retrieves the attributes for QuotedText elements.  The Role element is an array.
+func NewQuotedTextAttributes(attributes interface{}) (Attributes, error) {
+	if attributes == nil {
+		return nil, nil
+	}
+	switch attrs := attributes.(type) {
+	case []interface{}:
+		// nested case, because of the grammar syntax,
+		// eg: `attributes:(ElementAttribute* LiteralAttribute ElementAttribute*)`
+		// which is used to ensure that a `LiteralAttribute` element is set amongst the attributes
+		if len(attrs) == 0 {
+			return nil, nil
+		}
+		result := Attributes{}
+		for _, a := range attrs {
+			r, err := NewAttributes(a)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range r {
+				if err := addAttribute(result, k, v); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return result, nil
+	case Attributes:
+		return attrs, nil
+	case map[string]interface{}:
+		if len(attrs) == 0 {
+			return nil, nil
+		}
+		result := Attributes{}
+		for k, v := range attrs {
+			if err := addAttribute(result, k, v); err != nil {
+				return nil, err
+			}
 		}
 		return result, nil
 	default:

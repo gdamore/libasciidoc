@@ -2,10 +2,10 @@
 package parser 
 
 import (
-    "strconv"
     "io"
+    "strconv"
+    "strings"
     "unicode"
-
     "github.com/bytesparadise/libasciidoc/pkg/types"
 )
 
@@ -40,7 +40,7 @@ AsciidocDocumentBlocks <- header:(DocumentHeader?) others:(DocumentBlock*) {
 }
 
 DocumentBlock <- 
-        LabeledListItem // mjst appear before simple paragraph
+        LabeledListItem // must appear before simple paragraph
         / SimpleParagraph
         / BlankLine // must be before LiteralBlock 
         / Section
@@ -312,6 +312,65 @@ QuoteAttribute <- ([^\r\n,\]]*) {
 InlineAttributes <- "[" attrs:(GenericAttribute)* "]" {
     return types.NewAttributes(attrs.([]interface{}))								
 } 
+
+// Quoted Text attributes (attributes in front of marked up text).
+//
+// There are two syntaxes, a regular form, and another special short-hand form.
+// They behave quite differently from each other, and quite differently from the format
+// used for attribute lists elsewhere.  Both are *extremely* limited.
+//
+// The regular form consists *solely* of a role.  It is the entire text between
+// the open and closing brackets.  No transforms or validation are done.  If this
+// contains illegal characters, asciidoctor passes it straight-through, leading to
+// invalid context.
+//
+// Note that just to make matters more fun, the handling of these lists is somewhat
+// different for constrained vs unconstrained elements.  With constrained elements,
+// the presence of a comma or named attributes is not tolerated, and the list is
+// passed to the output.  With unconstrained markup, any named attributes are simply
+// ignored (everything after the comma is just discarded).  For the sake of sanity
+// we elect to use the more generous form and just discard everything after and including
+// the first comma.  (Perhaps someday more sanity will prevail, and will let us use
+// real named values, including id=, in this form.)  It appears that asciidoctor will
+// trim trailing whitespace, but not leading.  Another win for consistency! (Or not.)
+//
+// The second form is a short-hand that consists of either .role or #id elements,
+// concatenated together with no whitespace permitted between them, or between the
+// enclosing brackets at all.  Anything except a closing bracket (]), dot (.), or hash (#)
+// may be present in these.  Multiple roles may be present, and if so they will be
+// joined with a space and placed in the CSS class.  (Asciidoctor does not escape these,
+// making it possible to create invalid or insecure content.)
+//
+// Corollary 1: There can only be role or ID attributes.
+// Corollary 2: The ID cannot contain a hash or a dot.
+// Corollary 3: There can be only one role if it contains either a hash or a dot.
+// Corollary 4: Neither the ID nor the role may contain a closing bracket.
+//
+// Conclusion: Limit oneself to [0-9A-Za-z_-] in roles and IDs for reliable results.
+//
+
+QuotedTextAttrs <- attrs:(QuotedTextRole / QuotedTextShortHand) {
+    return attrs, nil
+}
+
+QuotedTextRoleWord <- [^\]]* {
+    return strings.SplitN(string(c.text), ",", 2)[0], nil
+}
+QuotedTextRole <- "[" ![#.] role:QuotedTextRoleWord "]" {
+    return []interface{}{types.Attributes{ "role": role }}, nil
+}
+
+QuotedTextShortHand <- "[" attrs:( QuotedTextShortRole / QuotedTextShortID )+ "]" {
+    return attrs, nil
+}
+
+QuotedTextShortRole <- '.' [^.#\]]+ {
+    return types.NewElementRole(string(c.text[1:]))
+}
+
+QuotedTextShortID <- '#' [^.#\]]+ {
+    return types.NewElementID(string(c.text[1:]))
+}
 
 // ------------------------------------------
 // Sections
@@ -838,7 +897,7 @@ InlineElement <-
             / CrossReference 
             / InlineUserMacro 
             / AttributeSubstitution 
-            / InlineElementID 
+            / InlineElementID
             / ConcealedIndexTerm
             / IndexTerm
             / AnyChar)) {
@@ -898,8 +957,8 @@ TwoOrMoreBackslashes <- `\\` `\`* {
 
 BoldText <- DoubleQuoteBoldText / SingleQuoteBoldText // double punctuation must be evaluated first
 
-DoubleQuoteBoldText <- !`\\` "**" elements:(DoubleQuoteBoldTextElements) "**" { 
-    return types.NewQuotedText(types.Bold, elements.([]interface{}))
+DoubleQuoteBoldText <- attrs:(QuotedTextAttrs)? !`\\` "**" elements:(DoubleQuoteBoldTextElements) "**" {
+    return types.NewQuotedText(types.Bold, attrs, elements.([]interface{}))
 } 
 
 DoubleQuoteBoldTextElements <- DoubleQuoteBoldTextElement (!("**") (Space / DoubleQuoteBoldTextElement))*  // may start and end with spaces
@@ -928,10 +987,10 @@ DoubleQuoteBoldTextFallbackCharacter <-
     return types.NewStringElement(string(c.text))
 }
 
-SingleQuoteBoldText <- (!`\` "*" !"*") elements:(SingleQuoteBoldTextElements) "*" &(!Alphanum) { // single punctuation cannot be followed by a character (needs '**' to emphazise a portion of a word)
-    return types.NewQuotedText(types.Bold, elements.([]interface{}))
-} / !`\\` "*" elements:("*" SingleQuoteBoldTextElements) "*" { // unbalanced `**` vs `*` punctuation.
-    return types.NewQuotedText(types.Bold, elements.([]interface{})) // include the second heading `*` as a regular StringElement in the bold content
+SingleQuoteBoldText <- attrs:(QuotedTextAttrs)? (!`\` "*" !"*") elements:(SingleQuoteBoldTextElements) "*" &(!Alphanum) { // single punctuation cannot be followed by a character (needs '**' to emphazise a portion of a word)
+    return types.NewQuotedText(types.Bold, attrs, elements.([]interface{}))
+} / attrs:(QuotedTextAttrs)? !`\\` "*" elements:("*" SingleQuoteBoldTextElements) "*" { // unbalanced `**` vs `*` punctuation.
+    return types.NewQuotedText(types.Bold, attrs, elements.([]interface{})) // include the second heading `*` as a regular StringElement in the bold content
 } 
 
 SingleQuoteBoldTextElements <- !Space SingleQuoteBoldTextElement+
@@ -976,8 +1035,8 @@ EscapedBoldText <-
 
 ItalicText <- DoubleQuoteItalicText / SingleQuoteItalicText
 
-DoubleQuoteItalicText <- !`\\` "__" elements:(DoubleQuoteItalicTextElements) "__" { // double punctuation must be evaluated first
-    return types.NewQuotedText(types.Italic, elements.([]interface{}))
+DoubleQuoteItalicText <- attrs:(QuotedTextAttrs)? !`\\` "__" elements:(DoubleQuoteItalicTextElements) "__" { // double punctuation must be evaluated first
+    return types.NewQuotedText(types.Italic, attrs, elements.([]interface{}))
 }
 
 DoubleQuoteItalicTextElements <- DoubleQuoteItalicTextElement (!("__") (Space / DoubleQuoteItalicTextElement))*  // may start and end with spaces
@@ -1004,10 +1063,10 @@ DoubleQuoteItalicTextFallbackCharacter <-
     return types.NewStringElement(string(c.text))
 }
 
-SingleQuoteItalicText <- (!`\` "_" !"_") elements:(SingleQuoteItalicTextElements) "_" { // single punctuation cannot be followed by a character (needs '__' to emphazise a portion of a word)
-    return types.NewQuotedText(types.Italic, elements.([]interface{}))
-} / !`\\` "_" elements:("_" SingleQuoteItalicTextElements) "_" { // unbalanced `__` vs `_` punctuation.
-    return types.NewQuotedText(types.Italic, elements.([]interface{})) // include the second heading `_` as a regular StringElement in the italic content
+SingleQuoteItalicText <- attrs:(QuotedTextAttrs)? (!`\` "_" !"_") elements:(SingleQuoteItalicTextElements) "_" { // single punctuation cannot be followed by a character (needs '__' to emphazise a portion of a word)
+    return types.NewQuotedText(types.Italic, attrs, elements.([]interface{}))
+} / attrs:(QuotedTextAttrs)? !`\\` "_" elements:("_" SingleQuoteItalicTextElements) "_" { // unbalanced `__` vs `_` punctuation.
+    return types.NewQuotedText(types.Italic, attrs, elements.([]interface{})) // include the second heading `_` as a regular StringElement in the italic content
 } 
 
 SingleQuoteItalicTextElements <- !Space SingleQuoteItalicTextElement+
@@ -1051,8 +1110,8 @@ EscapedItalicText <-
 // -----------------
 MonospaceText <- DoubleQuoteMonospaceText / SingleQuoteMonospaceText
 
-DoubleQuoteMonospaceText <- !`\\` "``" elements:(DoubleQuoteMonospaceTextElements) "``" { // double punctuation must be evaluated first
-    return types.NewQuotedText(types.Monospace, elements.([]interface{}))
+DoubleQuoteMonospaceText <- attrs:(QuotedTextAttrs)? !`\\` "``" elements:(DoubleQuoteMonospaceTextElements) "``" { // double punctuation must be evaluated first
+    return types.NewQuotedText(types.Monospace, attrs, elements.([]interface{}))
 }
 
 DoubleQuoteMonospaceTextElements <- DoubleQuoteMonospaceTextElement (!("``") (Space / DoubleQuoteMonospaceTextElement))* // may start and end with spaces
@@ -1079,10 +1138,10 @@ DoubleQuoteMonospaceTextFallbackCharacter <-
     return types.NewStringElement(string(c.text))
 }
 
-SingleQuoteMonospaceText <- (!`\` "`" !"`") elements:(SingleQuoteMonospaceTextElements) "`" { // single punctuation cannot be followed by a character (needs "``" to emphazise a portion of a word)
-    return types.NewQuotedText(types.Monospace, elements.([]interface{}))
-} / !`\\` "`" elements:("`" SingleQuoteMonospaceTextElements) "`" { // unbalanced "``" vs "`" punctuation.
-    return types.NewQuotedText(types.Monospace, elements.([]interface{})) // include the second heading "`" as a regular StringElement in the monospace content
+SingleQuoteMonospaceText <- attrs:(QuotedTextAttrs)? (!`\` "`" !"`") elements:(SingleQuoteMonospaceTextElements) "`" { // single punctuation cannot be followed by a character (needs "``" to emphazise a portion of a word)
+    return types.NewQuotedText(types.Monospace, attrs, elements.([]interface{}))
+} / attrs:(QuotedTextAttrs)? !`\\` "`" elements:("`" SingleQuoteMonospaceTextElements) "`" { // unbalanced "``" vs "`" punctuation.
+    return types.NewQuotedText(types.Monospace, attrs, elements.([]interface{})) // include the second heading "`" as a regular StringElement in the monospace content
 } 
 
 SingleQuoteMonospaceTextElements <- !Space SingleQuoteMonospaceTextElement+
@@ -1122,8 +1181,8 @@ EscapedMonospaceText <-
         return types.NewEscapedQuotedText(backslashes.(string), "`", elements.([]interface{}))
 } 
 
-SubscriptText <- !`\` "~" element:(SubscriptTextElement) "~" { // wraps a single word
-    return types.NewQuotedText(types.Subscript, element)
+SubscriptText <- attrs:(QuotedTextAttrs)? !`\` "~" element:(SubscriptTextElement) "~" { // wraps a single word
+    return types.NewQuotedText(types.Subscript, attrs, element)
 }
 
 SubscriptTextElement <- QuotedText / NonSubscriptText 
@@ -1136,8 +1195,8 @@ EscapedSubscriptText <- backslashes:(OneOrMoreBackslashes) "~" element:(Subscrip
     return types.NewEscapedQuotedText(backslashes.(string), "~", element)
 } 
 
-SuperscriptText <- !`\` "^" element:(SuperscriptTextElement) "^" { // wraps a single word
-    return types.NewQuotedText(types.Superscript, element)
+SuperscriptText <- attrs:(QuotedTextAttrs)? !`\` "^" element:(SuperscriptTextElement) "^" { // wraps a single word
+    return types.NewQuotedText(types.Superscript, attrs, element)
 }
 
 SuperscriptTextElement <- QuotedText / NonSuperscriptText 
@@ -1677,7 +1736,7 @@ Alphanums <- [\pL0-9]+ {
     return string(c.text), nil
 }
 
-Word <- 
+Word <-
     // very straightforward content: alphanums followed by attached simple quote delimiter and more characters 
     // (in this case, the quoted text delimiters are intepreted as regular characters)
     // then followed by spaces but not the "+" signs because it needs a heading space to become a LineBreak element
