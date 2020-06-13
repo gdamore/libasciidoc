@@ -335,7 +335,7 @@ func addAttribute(attrs Attributes, key string, val interface{}) error {
 		return errors.New("id must be a string")
 	case AttrRole:
 		// Roles are special.  We store them as []string, as there can be multiple roles.
-		old, _ := attrs[AttrRole]
+		old := attrs[AttrRole]
 		roles, _ := old.([]string)
 
 		switch v := val.(type) {
