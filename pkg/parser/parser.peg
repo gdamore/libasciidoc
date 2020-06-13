@@ -316,7 +316,7 @@ InlineAttributes <- "[" attrs:(GenericAttribute)* "]" {
 // Quoted Text attributes (attributes in front of marked up text).
 //
 // There are two forms, regular [role], and short-hand [.role#id].
-// They behave differently from each other and  from other attribute lists.
+// They behave differently from each other and from other attribute lists.
 //
 // Document authors concerned with compatibility should stick to using
 // just alphanumerics, the hyphen, and the underscore, in these values,
