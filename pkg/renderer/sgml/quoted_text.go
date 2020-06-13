@@ -18,10 +18,6 @@ type quotedText struct {
 	Content    sanitized
 }
 
-func (q *quotedText) String() sanitized {
-	return q.Content
-}
-
 func (r *sgmlRenderer) renderQuotedText(ctx *renderer.Context, t types.QuotedText) ([]byte, error) {
 	elementsBuffer := &bytes.Buffer{}
 	for _, element := range t.Elements {
