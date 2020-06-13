@@ -315,51 +315,31 @@ InlineAttributes <- "[" attrs:(GenericAttribute)* "]" {
 
 // Quoted Text attributes (attributes in front of marked up text).
 //
-// There are two syntaxes, a regular form, and another special short-hand form.
-// They behave quite differently from each other, and quite differently from the format
-// used for attribute lists elsewhere.  Both are *extremely* limited.
+// There are two forms, regular [role], and short-hand [.role#id].
+// They behave differently from each other and  from other attribute lists.
 //
-// The regular form consists *solely* of a role.  It is the entire text between
-// the open and closing brackets.  No transforms or validation are done.  If this
-// contains illegal characters, asciidoctor passes it straight-through, leading to
-// invalid context.
-//
-// Note that just to make matters more fun, the handling of these lists is somewhat
-// different for constrained vs unconstrained elements.  With constrained elements,
-// the presence of a comma or named attributes is not tolerated, and the list is
-// passed to the output.  With unconstrained markup, any named attributes are simply
-// ignored (everything after the comma is just discarded).  For the sake of sanity
-// we elect to use the more generous form and just discard everything after and including
-// the first comma.  (Perhaps someday more sanity will prevail, and will let us use
-// real named values, including id=, in this form.)  It appears that asciidoctor will
-// trim trailing whitespace, but not leading.  Another win for consistency! (Or not.)
-//
-// The second form is a short-hand that consists of either .role or #id elements,
-// concatenated together with no whitespace permitted between them, or between the
-// enclosing brackets at all.  Anything except a closing bracket (]), dot (.), or hash (#)
-// may be present in these.  Multiple roles may be present, and if so they will be
-// joined with a space and placed in the CSS class.  (Asciidoctor does not escape these,
-// making it possible to create invalid or insecure content.)
-//
-// Corollary 1: There can only be role or ID attributes.
-// Corollary 2: The ID cannot contain a hash or a dot.
-// Corollary 3: There can be only one role if it contains either a hash or a dot.
-// Corollary 4: Neither the ID nor the role may contain a closing bracket.
-//
-// Conclusion: Limit oneself to [0-9A-Za-z_-] in roles and IDs for reliable results.
-//
+// Document authors concerned with compatibility should stick to using
+// just alphanumerics, the hyphen, and the underscore, in these values,
+// and should also avoid whitespace.
 
 QuotedTextAttrs <- attrs:(QuotedTextRole / QuotedTextShortHand) {
     return attrs, nil
 }
 
-QuotedTextRoleWord <- [^\]]* {
-    return strings.SplitN(string(c.text), ",", 2)[0], nil
-}
+// This is for [role].  Anything between the brackets is
+// considered, but it must not start with a # or dot.  Anything after a comma
+// (including the comma) is discarded.  (Future support for named attributes?)
 QuotedTextRole <- "[" ![#.] role:QuotedTextRoleWord "]" {
     return []interface{}{types.Attributes{ "role": role }}, nil
 }
 
+QuotedTextRoleWord <- [^\]]* {
+    return strings.SplitN(string(c.text), ",", 2)[0], nil
+}
+
+// This is for [.role#id] (or [#id.role]).  Multiple roles can be present.  If multiple
+// ids are present only the first is retained.  Either the role or id may be omitted,
+// but at least one must be present.
 QuotedTextShortHand <- "[" attrs:( QuotedTextShortRole / QuotedTextShortID )+ "]" {
     return attrs, nil
 }
