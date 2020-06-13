@@ -181,6 +181,14 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
+		It("empty role", func() {
+			source := "[]**bold**"
+			expected := `<div class="paragraph">
+<p><strong>bold</strong></p>
+</div>`
+			Expect(RenderHTML(source)).To(MatchHTML(expected))
+		})
+
 		It("short-hand multiple roles and id", func() {
 			source := "[.r1#anchor.r2.r3]**bold**[#here.second.class]_text_"
 			expected := `<div class="paragraph">
