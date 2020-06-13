@@ -7,7 +7,7 @@ import (
 )
 
 func (r *sgmlRenderer) renderElementRole(attrs types.Attributes) string {
-	a, _ := attrs[types.AttrRole]
-	roles, _ := a.([]string)
+	a := attrs[types.AttrRole]
+	roles := a.([]string)
 	return strings.Join(roles, " ")
 }

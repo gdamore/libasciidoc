@@ -109,7 +109,7 @@ var _ = Describe("quoted texts", func() {
 	})
 
 	Context("attributes", func() {
-		It("simple role italics", func()  {
+		It("simple role italics", func() {
 			source := "[myrole]_italics_"
 			expected := `<div class="paragraph">
 <p><em class="myrole">italics</em></p>
@@ -117,7 +117,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("simple role italics unconstrained", func()  {
+		It("simple role italics unconstrained", func() {
 			source := "it[uncle]__al__ic"
 			expected := `<div class="paragraph">
 <p>it<em class="uncle">al</em>ic</p>
@@ -125,7 +125,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("simple role bold", func()  {
+		It("simple role bold", func() {
 			source := "[myrole]*bold*"
 			expected := `<div class="paragraph">
 <p><strong class="myrole">bold</strong></p>
@@ -133,7 +133,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("simple role bold unconstrained", func()  {
+		It("simple role bold unconstrained", func() {
 			source := "it[uncle]**al**ic"
 			expected := `<div class="paragraph">
 <p>it<strong class="uncle">al</strong>ic</p>
@@ -141,7 +141,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("simple role mono", func()  {
+		It("simple role mono", func() {
 			source := "[myrole]`true`"
 			expected := `<div class="paragraph">
 <p><code class="myrole">true</code></p>
@@ -149,7 +149,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("simple role mono unconstrained", func()  {
+		It("simple role mono unconstrained", func() {
 			source := "int[uncle]``eg``rate"
 			expected := `<div class="paragraph">
 <p>int<code class="uncle">eg</code>rate</p>
@@ -157,7 +157,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("role with comma truncates", func()  {
+		It("role with comma truncates", func() {
 			source := "[myrole,and nothing else]_italics_"
 			expected := `<div class="paragraph">
 <p><em class="myrole">italics</em></p>
@@ -165,7 +165,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("short-hand ID only", func()  {
+		It("short-hand ID only", func() {
 			source := "[#here]*bold*"
 			expected := `<div class="paragraph">
 <p><strong id="here">bold</strong></p>
@@ -173,7 +173,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("short-hand role only", func()  {
+		It("short-hand role only", func() {
 			source := "[.bob]**bold**"
 			expected := `<div class="paragraph">
 <p><strong class="bob">bold</strong></p>
@@ -181,7 +181,7 @@ var _ = Describe("quoted texts", func() {
 			Expect(RenderHTML(source)).To(MatchHTML(expected))
 		})
 
-		It("short-hand multiple roles and id", func()  {
+		It("short-hand multiple roles and id", func() {
 			source := "[.r1#anchor.r2.r3]**bold**[#here.second.class]_text_"
 			expected := `<div class="paragraph">
 <p><strong id="anchor" class="r1 r2 r3">bold</strong><em id="here" class="second class">text</em></p>
@@ -191,7 +191,7 @@ var _ = Describe("quoted texts", func() {
 
 		// This demonstrates that we cannot inject malicious data in these attributes.
 		// Note that this is a divergence from asciidoctor, which lets you put whatever you want here.
-		It("embedded garbage", func()  {
+		It("embedded garbage", func() {
 			source := "[.<something \"wicked>]**bold**"
 			expected := `<div class="paragraph">
 <p><strong class="&lt;something &#34;wicked&gt;">bold</strong></p>
