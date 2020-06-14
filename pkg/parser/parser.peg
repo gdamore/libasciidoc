@@ -329,12 +329,15 @@ QuotedTextAttrs <- attrs:(QuotedTextRole / QuotedTextShortHand) {
 // This is for [role].  Anything between the brackets is
 // considered, but it must not start with a # or dot.  Anything after a comma
 // (including the comma) is discarded.  (Future support for named attributes?)
-QuotedTextRole <- "[" ![#.] role:QuotedTextRoleWord "]" {
-    return []interface{}{types.Attributes{ "role": role }}, nil
+QuotedTextRole <- "[" role:QuotedTextRoleWord? "]" {
+    //return []interface{}{types.Attributes{ "role": role }}, nil
+    return types.NewElementRole(role.(string))
 }
 
-QuotedTextRoleWord <- [^\]]* {
+QuotedTextRoleWord <- ![#.] role:([^\]]* {
     return strings.SplitN(string(c.text), ",", 2)[0], nil
+}) {
+    return role, nil
 }
 
 // This is for [.role#id] (or [#id.role]).  Multiple roles can be present.  If multiple
@@ -344,12 +347,16 @@ QuotedTextShortHand <- "[" attrs:( QuotedTextShortRole / QuotedTextShortID )+ "]
     return attrs, nil
 }
 
-QuotedTextShortRole <- '.' [^.#\]]+ {
-    return types.NewElementRole(string(c.text[1:]))
+QuotedTextShortRole <- '.' role:([^.#\]]+ { 
+        return string(c.text), nil 
+    }) {
+    return types.NewElementRole(role.(string))
 }
 
-QuotedTextShortID <- '#' [^.#\]]+ {
-    return types.NewElementID(string(c.text[1:]))
+QuotedTextShortID <- '#' id:([^.#\]]+ {
+        return string(c.text), nil
+    }) {
+    return types.NewElementID(id.(string))
 }
 
 // ------------------------------------------

@@ -13,7 +13,7 @@ import (
 
 type quotedText struct {
 	ID         string
-	Role       string
+	Roles      string
 	Attributes types.Attributes
 	Content    sanitized
 }
@@ -50,7 +50,7 @@ func (r *sgmlRenderer) renderQuotedText(ctx *renderer.Context, t types.QuotedTex
 	err := tmpl.Execute(result, &quotedText{
 		Attributes: t.Attributes,
 		ID:         template.HTMLEscapeString(r.renderElementID(t.Attributes)),
-		Role:       template.HTMLEscapeString(r.renderElementRole(t.Attributes)),
+		Roles:      template.HTMLEscapeString(r.renderElementRoles(t.Attributes)),
 		Content:    sanitized(elementsBuffer.String()),
 	}) //nolint: gosec
 	if err != nil {

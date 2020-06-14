@@ -6,8 +6,13 @@ import (
 	"github.com/bytesparadise/libasciidoc/pkg/types"
 )
 
-func (r *sgmlRenderer) renderElementRole(attrs types.Attributes) string {
-	a := attrs[types.AttrRole]
-	roles, _ := a.([]string)
-	return strings.Join(roles, " ")
+func (r *sgmlRenderer) renderElementRoles(attrs types.Attributes) string {
+	switch r := attrs[types.AttrRole].(type) {
+	case []string:
+		return strings.Join(r, " ")
+	case string:
+		return r
+	default:
+		return ""
+	}
 }

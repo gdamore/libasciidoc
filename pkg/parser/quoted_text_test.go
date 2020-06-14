@@ -790,7 +790,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "italics"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"myrole"},
+											types.AttrRole: "myrole",
 										},
 									},
 								},
@@ -817,7 +817,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "al"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"uncle"},
+											types.AttrRole: "uncle",
 										},
 									},
 									types.StringElement{
@@ -844,7 +844,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "bold"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"myrole"},
+											types.AttrRole: "myrole",
 										},
 									},
 								},
@@ -871,7 +871,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "al"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"uncle"},
+											types.AttrRole: "uncle",
 										},
 									},
 									types.StringElement{
@@ -898,7 +898,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "true"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"myrole"},
+											types.AttrRole: "myrole",
 										},
 									},
 								},
@@ -925,7 +925,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "eg"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"uncle"},
+											types.AttrRole: "uncle",
 										},
 									},
 									types.StringElement{
@@ -952,7 +952,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "italics"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"myrole"},
+											types.AttrRole: "myrole",
 										},
 									},
 								},
@@ -1001,7 +1001,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "bold"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"bob"},
+											types.AttrRole: "bob",
 										},
 									},
 								},
@@ -1062,7 +1062,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "bold"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{""},
+											types.AttrRole: "",
 										},
 									},
 								},
@@ -1088,7 +1088,7 @@ var _ = Describe("quoted texts", func() {
 											types.StringElement{Content: "bold"},
 										},
 										Attributes: types.Attributes{
-											types.AttrRole: []string{"<something \"wicked>"},
+											types.AttrRole: "<something \"wicked>",
 										},
 									},
 								},
