@@ -330,7 +330,6 @@ QuotedTextAttrs <- attrs:(QuotedTextRole / QuotedTextShortHand) {
 // considered, but it must not start with a # or dot.  Anything after a comma
 // (including the comma) is discarded.  (Future support for named attributes?)
 QuotedTextRole <- "[" role:QuotedTextRoleWord? "]" {
-    //return []interface{}{types.Attributes{ "role": role }}, nil
     return types.NewElementRole(role.(string))
 }
 
