@@ -7,6 +7,7 @@ type sgmlRenderer struct {
 	functions   funcMap
 	templates   Templates
 	prepareOnce sync.Once
+	options     map[string]interface{}
 
 	// Processed templates
 	admonitionBlock           *textTemplate

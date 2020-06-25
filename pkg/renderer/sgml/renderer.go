@@ -14,11 +14,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	OptionUnicode = "optUnicode" // if set to true, then use UTF-8 instead of entities where appropriate.
+)
+
 // Renderer implements the backend render interface by using sgml.
 type Renderer interface {
 
 	// Render renders a document to the given output stream.
 	Render(ctx *renderer.Context, doc types.Document, output io.Writer) (types.Metadata, error)
+
+	// SetOption is used to set options.
+	SetOption(name string, value interface{})
 
 	// SetFunction sets the named function.
 	SetFunction(name string, fn interface{})
@@ -43,6 +50,10 @@ func NewRenderer(t Templates) Renderer {
 	}
 
 	return r
+}
+
+func (r *sgmlRenderer) SetOption(name string, value interface{}) {
+	r.options[name] = value
 }
 
 func (r *sgmlRenderer) trimLeft(s string) string {
